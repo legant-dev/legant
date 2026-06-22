@@ -1,0 +1,23 @@
+# The on-call engineer's incident grant for the AI-SRE agent, as reviewable config.
+#   legant lint  -f incident.grants.yaml
+#   legant apply -f incident.grants.yaml --dir ./.legant   (mints the signed token)
+version: 1
+
+# The Legant-guarded k8s MCP proxy this token is for.
+audience: k8s-mcp://prod-cluster
+defaults:
+  ttl: 2h
+
+grants:
+  - name: incident
+    principal: user:oncall
+    agent: agent:sre-ai
+    scopes: [cluster:read, logs:read, deploy:scale, deploy:restart]
+    constraints:
+      # Replica ceiling (the proxy maps a scale's replica count onto max_amount).
+      max_amount: 5
+      # The ONLY tools the agent may discover or call. kubectl_delete, kubectl_generic,
+      # exec_in_pod, kubectl_patch, kubectl_apply are deliberately absent.
+      tools: [kubectl_get, kubectl_scale, kubectl_rollout, kubectl_logs]
+      # Bound to ONE namespace (the proxy sets the per-call resource to k8s://<ns>).
+      resources: [k8s://prod]

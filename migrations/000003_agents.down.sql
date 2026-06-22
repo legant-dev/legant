@@ -1,0 +1,4 @@
+DROP TABLE IF EXISTS api_keys;
+DROP TABLE IF EXISTS delegation_chains;
+DROP TABLE IF EXISTS agent_tokens;
+DROP TABLE IF EXISTS agents;

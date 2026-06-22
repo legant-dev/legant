@@ -1,0 +1,32 @@
+Legant is installed as release {{ .Release.Name }} in namespace {{ .Release.Namespace }}.
+
+Migrations ran as a pre-install/pre-upgrade hook, so the schema is ready before the
+server rolled out.
+
+{{- if .Values.server.enabled }}
+
+Authorization server (in-cluster):
+  http://{{ include "legant.fullname" . }}.{{ .Release.Namespace }}.svc:{{ .Values.server.service.port }}
+  Check readiness:
+    kubectl -n {{ .Release.Namespace }} rollout status deploy/{{ include "legant.fullname" . }}
+{{- end }}
+{{- if .Values.gateway.enabled }}
+
+MCP auth-gateway (in-cluster):
+  http://{{ include "legant.fullname" . }}-gateway.{{ .Release.Namespace }}.svc:{{ .Values.gateway.service.port }}
+{{- end }}
+
+{{- if and (not .Values.secrets.existingSecret) (not .Values.secrets.create) }}
+
+WARNING: no Secret configured. Set secrets.existingSecret (recommended) or
+secrets.create=true with secrets.values, or the workloads will not start.
+{{- end }}
+{{- if .Values.secrets.create }}
+
+NOTE: secrets were rendered from values (TRIAL/DEV). For production, manage them
+out-of-band (External Secrets Operator / Vault / SOPS) and set secrets.existingSecret.
+{{- end }}
+
+Honest scope: Legant is the delegated-authority + offline-verify + revocation +
+provenance layer. It complements — does not replace — k8s RBAC, SPIFFE/SPIRE,
+cert-manager, OPA/Gatekeeper, and Kyverno.

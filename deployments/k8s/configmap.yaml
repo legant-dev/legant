@@ -1,0 +1,17 @@
+# Non-secret configuration for `legant serve`. Secrets (DB URL, signing/cookie
+# secrets) live in the Secret — see secret.example.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: legant-config
+  labels:
+    app.kubernetes.io/name: legant
+data:
+  LEGANT_SERVER_HOST: "0.0.0.0"
+  LEGANT_SERVER_PORT: "8080"
+  # The public issuer URL clients and resource servers see. MUST be https in
+  # production (cookies are marked Secure when this is https://).
+  LEGANT_ISSUER_URL: "https://auth.example.com"
+  # Migrations are applied as a separate pre-deploy Job (migrate-job.yaml), so
+  # auto-migrate on boot is left off.
+  LEGANT_DATABASE_AUTO_MIGRATE: "false"

@@ -1,0 +1,14 @@
+{
+  "//": "Sample Claude Code settings wiring the Legant guard as a PreToolUse hook.",
+  "//env": "The guard reads its config from LEGANT_GUARD_* env vars (see below). Export them in the shell that launches Claude Code, OR run `legant guard init` to generate a settings.json whose command has the env inlined.",
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "*",
+        "hooks": [
+          { "type": "command", "command": "legant guard check" }
+        ]
+      }
+    ]
+  }
+}

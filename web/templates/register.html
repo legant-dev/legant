@@ -1,0 +1,38 @@
+{{define "title"}}Sign Up{{end}}
+{{define "content"}}
+<div class="logo">
+    <h1>Legant</h1>
+    <p>Create your account</p>
+</div>
+
+{{if .Error}}
+<div class="error">
+    {{if eq .Error "missing_fields"}}Please fill in all required fields.{{end}}
+    {{if eq .Error "password_too_short"}}Password must be at least 8 characters.{{end}}
+    {{if eq .Error "email_taken"}}An account with this email already exists.{{end}}
+</div>
+{{end}}
+
+<form method="POST" action="/register">
+    <input type="hidden" name="query" value="{{.Query}}">
+    <div class="form-group">
+        <label for="display_name">Name</label>
+        <input type="text" id="display_name" name="display_name" placeholder="Your name">
+    </div>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required placeholder="At least 8 characters">
+    </div>
+    <button type="submit">Create Account</button>
+</form>
+
+<div class="link">
+    Already have an account? <a href="/login?{{.Query}}">Sign in</a>
+</div>
+{{end}}
+
+{{template "layout" .}}

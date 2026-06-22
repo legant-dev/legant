@@ -1,0 +1,113 @@
+# Default values for the Legant chart. `helm install legant ./legant -f my-values.yaml`.
+
+image:
+  repository: ghcr.io/legant-dev/legant
+  # tag defaults to the chart's appVersion. Pin a DIGEST in production:
+  #   tag: "sha256:..."
+  tag: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# The public issuer URL clients and resource servers see. MUST be https in
+# production (session cookies are marked Secure only when this is https://).
+issuer: https://auth.example.com
+
+# ---- Secrets -----------------------------------------------------------------
+# Production: reference a Secret you manage out-of-band (External Secrets Operator,
+# Vault, SOPS, a cloud secret store) via existingSecret. Trial/dev: set create=true
+# and fill `values` below — the chart renders a Secret (NOT for production).
+secrets:
+  existingSecret: "" # name of a pre-existing Secret with the LEGANT_* keys
+  create: false
+  values:
+    LEGANT_DATABASE_URL: "" # postgres://legant:...@host:5432/legant?sslmode=require
+    LEGANT_SECRETS_SYSTEM: "" # Fosite HMAC, 32+ bytes
+    LEGANT_SECRETS_COOKIE: "" # cookie signing, 32+ bytes, distinct
+    LEGANT_SECRETS_KEY_ENCRYPTION: "" # signing-key envelope key, 32+ bytes, distinct
+
+# ---- Authorization server (legant serve) ------------------------------------
+server:
+  enabled: true
+  replicas: 2
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+  service:
+    type: ClusterIP
+    port: 80
+
+# ---- Migrations (run as a pre-install/pre-upgrade Helm HOOK) -----------------
+# This encodes the documented ordering — migrations always complete BEFORE the
+# server/gateway roll out — so an out-of-order apply can't happen.
+migrate:
+  enabled: true
+  backoffLimit: 3
+
+# ---- MCP auth-gateway (legant gateway) --------------------------------------
+gateway:
+  enabled: true
+  replicas: 2
+  resources:
+    requests: { cpu: 100m, memory: 128Mi }
+    limits: { cpu: "1", memory: 512Mi }
+  service:
+    type: ClusterIP
+    port: 80
+  # Per-tool delegation enforcement in front of MCP servers. Each upstream's
+  # inbound_audience MUST be unique so a token bound to one can't be replayed at
+  # another. (Upstreams can also be managed at runtime via the DB-backed registry.)
+  upstreams:
+    - slug: weather
+      inbound_audience: https://gateway.example.com/mcp/weather
+      url: http://weather-mcp.svc.cluster.local:9000/mcp
+      resource_id: https://weather-mcp.example.com/
+      tool_scopes:
+        get_weather: weather:read
+
+# ---- Operational CronJobs ----------------------------------------------------
+cronjobs:
+  # Nightly retention prune (expired sessions/tokens; audit retention off by default).
+  retention:
+    enabled: true
+    schedule: "17 3 * * *"
+    tokenGrace: "720h"
+    auditRetention: "" # e.g. "8760h" to purge audit events older than 1y (compliance permitting)
+  # Hourly audit-chain integrity check; a broken chain fails the Job (alert on it).
+  auditVerify:
+    enabled: true
+    schedule: "37 * * * *"
+
+# ---- Observability -----------------------------------------------------------
+# Prometheus Operator ServiceMonitors scraping /metrics (server + gateway).
+serviceMonitor:
+  enabled: false
+  interval: 30s
+
+# Bundle the Grafana dashboard as a ConfigMap the Grafana sidecar auto-imports.
+dashboard:
+  enabled: false
+  # The label the Grafana sidecar watches for (grafana.com/docs sidecar default).
+  label: grafana_dashboard
+  labelValue: "1"
+
+# Pod security context (applied to all workloads). Legant runs as a distroless
+# nonroot with a read-only root filesystem.
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  seccompProfile:
+    type: RuntimeDefault
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: true
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

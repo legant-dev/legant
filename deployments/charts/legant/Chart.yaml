@@ -1,0 +1,25 @@
+apiVersion: v2
+name: legant
+description: Open-source OAuth 2.1 + RFC 8693 delegated authorization for AI agents — the authorization server, the MCP auth-gateway, and the operational CronJobs, packaged for Kubernetes.
+type: application
+# Chart version — bump on chart changes. appVersion tracks the Legant release the
+# default image points at; override image.tag to pin a digest in production.
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/legant-dev/legant
+sources:
+  - https://github.com/legant-dev/legant
+keywords:
+  - oauth2
+  - rfc8693
+  - delegation
+  - ai-agents
+  - mcp
+  - authorization
+maintainers:
+  - name: Legant maintainers
+annotations:
+  # Honest scope: Legant COMPLEMENTS k8s RBAC / SPIFFE / Kyverno / OPA — it is the
+  # delegated-authority + offline-verify + revocation + provenance layer on top, not
+  # a replacement for cluster hardening or an OIDC server like Keycloak/Ory.
+  category: Security

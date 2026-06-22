@@ -1,0 +1,113 @@
+{{- if .Values.gateway.enabled }}
+# The MCP auth-gateway (`legant gateway`): per-tool delegation enforcement in front
+# of MCP servers. Static upstreams come from this ConfigMap; more can be added at
+# runtime via the DB-backed registry without a redeploy.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "legant.fullname" . }}-gateway-config
+  labels:
+    {{- include "legant.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+data:
+  legant.yaml: |
+    issuer:
+      url: {{ .Values.issuer }}
+    server:
+      host: 0.0.0.0
+      port: 8080
+    gateway:
+      upstreams:
+        {{- toYaml .Values.gateway.upstreams | nindent 8 }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "legant.fullname" . }}-gateway
+  labels:
+    {{- include "legant.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: {{ .Values.gateway.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: {{ include "legant.name" . }}
+      app.kubernetes.io/instance: {{ .Release.Name }}
+      app.kubernetes.io/component: gateway
+  template:
+    metadata:
+      labels:
+        {{- include "legant.labels" . | nindent 8 }}
+        app.kubernetes.io/component: gateway
+      annotations:
+        # Roll the gateway when its upstream config changes.
+        checksum/config: {{ toYaml .Values.gateway.upstreams | sha256sum }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- include "legant.scheduling" . | nindent 6 }}
+      containers:
+        - name: gateway
+          image: {{ include "legant.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["gateway"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # The gateway shares Legant's database (revocation + audit) and the
+            # key-encryption secret (to read the published signing keys).
+            - name: LEGANT_SECRETS_KEY_ENCRYPTION
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "legant.secretName" . }}
+                  key: LEGANT_SECRETS_KEY_ENCRYPTION
+            - name: LEGANT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "legant.secretName" . }}
+                  key: LEGANT_DATABASE_URL
+          volumeMounts:
+            - name: config
+              mountPath: /etc/legant
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources:
+            {{- toYaml .Values.gateway.resources | nindent 12 }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "legant.fullname" . }}-gateway-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "legant.fullname" . }}-gateway
+  labels:
+    {{- include "legant.labels" . | nindent 4 }}
+    app.kubernetes.io/component: gateway
+spec:
+  type: {{ .Values.gateway.service.type }}
+  selector:
+    app.kubernetes.io/name: {{ include "legant.name" . }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+    app.kubernetes.io/component: gateway
+  ports:
+    - name: http
+      port: {{ .Values.gateway.service.port }}
+      targetPort: http
+{{- end }}

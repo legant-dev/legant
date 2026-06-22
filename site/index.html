@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Legant — delegated authorization for AI agents</title>
+<meta name="description" content="Open-source OAuth 2.1 + RFC 8693 delegated-authorization for AI agents. An agent acts on behalf of a user with authority that's scoped, constrained, attenuating, revocable, and auditable. Go, single binary, self-hostable." />
+<meta property="og:title" content="Legant — delegated authorization for AI agents" />
+<meta property="og:description" content="An AI agent acts on behalf of a user with authority that's scoped, constrained, attenuating, revocable, and auditable — enforced offline from the signed token." />
+<link rel="stylesheet" href="assets/legant.css" />
+<style>
+  .hero{padding:70px 0 30px;display:grid;grid-template-columns:1.1fr .9fr;gap:40px;align-items:center}
+  @media(max-width:880px){.hero{grid-template-columns:1fr;gap:28px;padding:46px 0 18px}}
+  .hero h1{font-size:39px;line-height:1.1;letter-spacing:-1px}
+  @media(max-width:880px){.hero h1{font-size:31px}}
+  .hero h1 .g{color:var(--gold)}
+  .hero p.lead{color:var(--ink-2);font-size:17px;margin:18px 0 26px;max-width:54ch}
+  .hero .cta{display:flex;flex-wrap:wrap;gap:11px}
+  .tokcard{background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;
+    box-shadow:0 30px 60px -40px #000}
+  .tokcard .hd{display:flex;align-items:center;gap:8px;padding:12px 15px;border-bottom:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  .tokcard .hd .dot{width:9px;height:9px;border-radius:50%;background:var(--allow)}
+  .tokcard .bd{padding:15px;font-family:var(--mono);font-size:12.8px;line-height:1.9}
+  .tokcard .key{color:var(--ink-3)}
+  .tokcard .chainline{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:3px 0}
+  .arrow{color:var(--gold)}
+  .tokcard .foot{border-top:1px solid var(--line);padding:11px 15px;color:var(--allow-ink);
+    font-size:12px;display:flex;align-items:center;gap:8px;background:var(--allow-bg)}
+  .pillars{grid-template-columns:repeat(3,1fr)}
+  @media(max-width:880px){.pillars{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.pillars{grid-template-columns:1fr}}
+  .demos{grid-template-columns:1fr 1fr}
+  @media(max-width:680px){.demos{grid-template-columns:1fr}}
+  .demo{display:flex;flex-direction:column;transition:.16s}
+  .demo:hover{border-color:var(--line-3);text-decoration:none;transform:translateY(-2px)}
+  .demo .nm{font-family:var(--mono);color:var(--gold);font-size:13px;margin-bottom:4px}
+  .demo h3{font-size:17px;margin-bottom:8px;color:var(--ink)}
+  .demo p{flex:1}
+  .demo .run{margin-top:13px;font-family:var(--mono);font-size:12px;color:var(--ink-2);
+    background:#0c0f16;border:1px solid var(--line);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px}
+  .demo .run .play{color:var(--gold)}
+  .stat{display:flex;gap:30px;flex-wrap:wrap;margin-top:22px;color:var(--ink-3);font-size:13px}
+  .stat b{color:var(--ink);font-weight:600;font-family:var(--mono)}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Legant is an open-source OAuth 2.1 and RFC 8693 delegated-authorization layer that lets an AI agent act on behalf of a user with scoped, constrained, attenuating, revocable, and auditable authority, enforced offline from the signed token.</h2>
+
+<nav class="nav"><div class="wrap row">
+  <a class="brand" href="#top">
+    <svg class="crown" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l3.5 3L12 5l5.5 6L21 8l-1.6 9.2a1 1 0 0 1-1 .8H5.6a1 1 0 0 1-1-.8L3 8z" fill="#e2b457"/><circle cx="3" cy="8" r="1.5" fill="#e2b457"/><circle cx="21" cy="8" r="1.5" fill="#e2b457"/><circle cx="12" cy="4" r="1.6" fill="#e2b457"/></svg>
+    Legant</a>
+  <div class="links">
+    <a href="#problem" class="hide-sm">Why</a>
+    <a href="#demos">Demos</a>
+    <a href="live.html" style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--allow);display:inline-block"></span>Live</a>
+    <a href="#revocation" class="hide-sm">Revocation</a>
+    <a href="#quickstart" class="hide-sm">Quickstart</a>
+    <a href="https://github.com/legant-dev/legant" class="btn ghost" style="padding:7px 13px">GitHub</a>
+  </div>
+</div></nav>
+
+<a id="top"></a>
+<div class="wrap">
+  <header class="hero">
+    <div>
+      <span class="eyebrow">OAuth 2.1 · RFC 8693 · for AI agents</span>
+      <h1>Let an agent act <span class="g">on behalf of</span> a user — not <span class="g">as</span> them.</h1>
+      <p class="lead">Legant is an open-source delegated-authorization layer for AI agents. Authority is scoped, constrained, attenuating, revocable, and auditable — and limits like <i>“travel and meals under $500 for the next hour”</i> ride inside the signed token and are enforced offline by the resource server. Any sub-agent it spawns can only ever do less.</p>
+      <div class="cta">
+        <a class="btn gold" href="#demos">Run a demo in 30 seconds</a>
+        <a class="btn" href="https://github.com/legant-dev/legant">Read the code on GitHub</a>
+      </div>
+      <div class="stat">
+        <span><b>1</b> binary · Go</span>
+        <span><b>0</b> callbacks at request time</span>
+        <span><b>offline</b> token verification</span>
+      </div>
+    </div>
+    <div class="tokcard" aria-hidden="true">
+      <div class="hd"><span class="dot"></span> composite delegation token · RS256</div>
+      <div class="bd">
+        <div><span class="key">sub</span> &nbsp;user:alice</div>
+        <div class="chainline"><span class="key">act</span> &nbsp;<span class="chip">agent:assistant</span><span class="arrow">→</span><span class="chip">agent:deal-finder</span></div>
+        <div style="margin-top:6px"><span class="key">cnst</span> &nbsp;max_amount <span style="color:var(--gold)">$500</span></div>
+        <div style="padding-left:38px">categories <span class="chip ok">travel</span> <span class="chip ok">meals</span></div>
+        <div style="padding-left:38px">resource finance-api · ttl 1h</div>
+      </div>
+      <div class="foot"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg> enforced by the resource server — no callback to Legant</div>
+    </div>
+  </header>
+</div>
+
+<section id="problem"><div class="wrap">
+  <div class="section-head">
+    <span class="eyebrow">The gap</span>
+    <h2>A plain OIDC server authenticates the agent. It can’t bound what the agent does for you.</h2>
+    <p>Keycloak, Ory, and Zitadel can authenticate an agent and hand it a token. What they can’t express is the sentence that actually matters once an agent is spending your money or calling your tools:</p>
+  </div>
+  <blockquote style="margin:22px 0;padding:16px 20px;border-left:2px solid var(--gold);background:var(--panel);border-radius:0 12px 12px 0;color:var(--ink);font-size:17px;max-width:74ch">
+    “this agent may act for Alice, only to submit travel and meal expenses under $500 for the next hour, and any sub-agent it spawns can only ever do less.”
+  </blockquote>
+  <p style="color:var(--ink-2);max-width:74ch">A flat OAuth scope can’t carry that — there’s no place to put the per-call dollar cap, the category and tool allow-lists, the time-of-day window, or the user→agent→sub-agent provenance, and no rule that authority can only narrow as it’s re-delegated. Legant’s core is exactly that sentence, made into signed tokens and a pure, unit-tested delegation engine. It’s a full OAuth 2.1 / OIDC provider too — auth code + PKCE, client credentials, refresh, discovery, JWKS, introspection, RFC 8707 resource indicators, RFC 7591 DCR, built on Fosite — so the delegation layer sits on standard substrate, not a fork of one.</p>
+</div></section>
+
+<section style="padding-top:8px"><div class="wrap">
+  <div class="section-head"><span class="eyebrow">What you get</span><h2>Six primitives a flat token can’t express</h2></div>
+  <div class="cards pillars" style="margin-top:24px">
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg></div>
+      <h3>Delegation, not impersonation</h3>
+      <p>RFC 8693 token exchange mints a token where <code>sub</code> is the user and <code>act</code> is the full nested agent chain. The agent acts on behalf of the user, never as the user — and the user→agent→sub-agent provenance is recorded in the token, not inferred.</p></div>
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 4.5-3.3 7.5-8 9-4.7-1.5-8-4.5-8-9V7z"/></svg></div>
+      <h3>Constraints enforced offline</h3>
+      <p>Max amount, category / tool / resource allow-lists, and a time-of-day window travel inside the signed <code>cnst</code> claim. A resource server authorizes them from the token with zero callback. (One honest exception: a rolling-hour rate cap needs shared state, so Legant enforces that at mint time.)</p></div>
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 4h14M7 4v6l-3 8h16l-3-8V4"/></svg></div>
+      <h3>Monotonic attenuation</h3>
+      <p>Re-delegated authority can only narrow. Scopes must be a subset of the parent’s; two disjoint allow-lists intersect to a deny-all sentinel, never the widening empty list; chains are depth-bounded and cycle-checked. A sub-agent can never gain authority a parent lacked.</p></div>
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h3>Confused-deputy-hardened MCP gateway</h3>
+      <p>On <code>tools/call</code> the gateway never forwards the inbound token — it mints a fresh, single-tool, audience-bound downstream token. <code>tools/list</code> is filtered to the delegated tools and fails closed if unparseable; duplicate JSON keys and JSON-RPC batches are rejected to close parser-differential attacks.</p></div>
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3M14 4h6v6M20 4l-9 9"/></svg></div>
+      <h3>Offline resource-server SDKs — Go, TypeScript, Python</h3>
+      <p>Accepting agent tokens in your API takes one import: verify + authorize fully offline (RS256 + kid + iss + aud + exp, requires an <code>act</code> chain) plus the Tier-B revocation feed — no Legant dependency, no per-request callback. Three SDKs kept in lockstep by golden conformance vectors minted from the real signer, so they can't drift.</p></div>
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M5 12h14M5 17h14"/><circle cx="3.5" cy="7" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="17" r="1"/></svg></div>
+      <h3>Tamper-evident, hash-chained audit</h3>
+      <p>Every audit row is SHA-256 hash-chained inside Postgres under an advisory lock. <code>legant audit verify</code> pinpoints the first edited, reordered, or truncated row against a pinned anchor. Tamper-<i>evident</i>, not tamper-proof — off-box anchors are on the roadmap for the both-tables-compromised case.</p></div>
+  </div>
+</div></section>
+
+<section id="demos" style="background:linear-gradient(180deg,rgba(20,26,40,.35),transparent);border-top:1px solid var(--line);border-bottom:1px solid var(--line)"><div class="wrap">
+  <div class="section-head"><span class="eyebrow">See it run</span><h2>Four demos, no database, no Docker</h2>
+    <p>Each runs on a pure in-memory engine and prints a faithful end-to-end story. The Conductor page below is a live, faithful replay of its real output — open it.</p></div>
+  <a href="live.html" class="card" style="display:flex;align-items:center;gap:14px;margin-top:20px;border-color:var(--allow-line)">
+    <span style="width:9px;height:9px;border-radius:50%;background:var(--allow);flex:none"></span>
+    <div style="flex:1"><h3 style="margin:0 0 2px">Legant Live — the authority graph, in real time</h3>
+      <p>Watch agents act on behalf of users, tool-call decisions stream in, and a revocation kill a whole chain — the operational console for agent authority.</p></div>
+    <span style="color:var(--gold);font-family:var(--mono);font-size:13px;white-space:nowrap">open live →</span>
+  </a>
+  <div class="cards demos" style="margin-top:24px">
+    <a class="card demo" href="demos/conductor.html">
+      <div class="nm">conductor ★</div>
+      <h3>One agent, many MCP servers, a receipt for every tool call</h3>
+      <p>The gateway mints a fresh single-tool, single-audience token per call instead of forwarding the agent’s. A 60-second token minted for the repo server, replayed against analytics, is rejected 401 (wrong audience). Injected <code>drop_table</code>/<code>charge</code> are 403’d before any upstream, and every allow and deny lands in a hash-chained flight recorder whose verify catches a tampered row.</p>
+      <div class="run"><span class="play">▶</span> go run ./examples/conductor &nbsp;·&nbsp; <span style="color:var(--gold)">open the live replay →</span></div>
+    </a>
+    <a class="card demo" href="demos/leash.html">
+      <div class="nm">leash</div>
+      <h3>Give your AI your accounts for one hour, then yank it</h3>
+      <p>Limits (≤ $400, travel/rideshare only) are signed constraints enforced offline at each merchant, so an injection buying a $400 gift card or a $900 suite is declined at the merchant. After Alice revokes, the kill-switch bites in two tiers: Legant won’t mint new tokens, and the tokens already held are refused 401 offline because the merchant polls the signed <code>/.well-known/revoked</code> feed.</p>
+      <div class="run"><span class="play">▶</span> go run ./examples/leash</div>
+    </a>
+    <a class="card demo" href="demos/charter.html">
+      <div class="nm">charter</div>
+      <h3>An agent-run company where the org chart IS the authority graph</h3>
+      <p>Re-delegation can only attenuate. When the founder drops Growth’s weekly budget from $500 to $50, re-delegating Bid with a requested $200 cap is clamped to $50 — so the same $150 Bid spend that was approved now bounces offline at the ad platform with full founder→CEO→Growth→Bid provenance. A child can never out-spend its parent.</p>
+      <div class="run"><span class="play">▶</span> go run ./examples/charter</div>
+    </a>
+    <a class="card demo" href="demos/honeytool.html">
+      <div class="nm">honeytool</div>
+      <h3>Catch prompt injection by the tools an agent reaches for</h3>
+      <p>Honeytools (<code>exfiltrate_secrets</code>, <code>wire_funds</code>) are left visible in <code>tools/list</code> as bait but never delegated. A poisoned document drives the agent to reach for them; each attempt is denied with no data touched and recorded in a tamper-evident tripwire log naming who tried what for whom.</p>
+      <div class="run"><span class="play">▶</span> go run ./examples/honeytool</div>
+    </a>
+  </div>
+</div></section>
+
+<section id="revocation"><div class="wrap">
+  <div class="section-head"><span class="eyebrow">Revocation, told honestly</span>
+    <h2>Three tiers — and the worst case is never worse than the token’s short TTL</h2>
+    <p>Most agent-auth pitches promise “instant offline revocation,” which is physically impossible without a per-call round-trip. Legant gives you three real tiers and lets you pick the coupling. A stale or missing feed can only ever <i>miss</i> a revoke — it can never forge one — because the token only ever gains a rejection, and its short TTL is the always-present backstop.</p></div>
+  <div style="overflow:auto;margin-top:22px">
+  <table class="tier">
+    <thead><tr><th style="width:200px">Tier</th><th>How</th><th style="width:210px">Latency</th><th style="width:230px">Coupling</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge a">A</span> <span class="tg">per-call store check</span></td>
+        <td>The MCP gateway and RFC 7662 introspection query the Postgres revocation store (a <code>jti</code> denylist) on every call. Unknown <code>jti</code> fails closed. A revoke takes effect on the very next call.</td>
+        <td class="lat">Immediate — synchronous indexed point-read per call</td>
+        <td>Tightest: every verified call needs the issuer’s DB reachable; a store error is treated as not-active (reject).</td></tr>
+      <tr><td><span class="badge b">B</span> <span class="tg">signed feed</span><div style="font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:4px">/.well-known/revoked</div></td>
+        <td>The issuer publishes a JWS-signed snapshot of revoked-but-unexpired <code>jti</code>s, signed with the <b>same JWKS key</b> (no new trust root). A monotonic version blocks rollback. The SDK polls it on a timer and checks an in-memory set — no per-request callback.</td>
+        <td class="lat">Within your poll interval; ≤5s server cache; never later than token expiry</td>
+        <td>Loose: fully offline at request time; the resource server only reaches the feed URL on its own polling timer.</td></tr>
+      <tr><td><span class="badge c">C</span> <span class="tg">TTL backstop</span></td>
+        <td>With no feed configured, the SDK validates signature / iss / aud / exp and the <code>act</code> claim; revocation is bounded by the token’s short TTL alone. This is also the default fail-open behavior when a feed is stale (fail-closed is opt-in).</td>
+        <td class="lat">Up to the token’s remaining TTL — it simply expires</td>
+        <td>Zero: no DB, no feed, fully offline.</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p style="color:var(--ink-3);font-size:13px;margin-top:14px;max-width:90ch">Default access-token lifespan is 5m — short and configurable, not a hard ceiling (raising <code>LEGANT_TOKEN_EXCHANGE_ACCESS_TOKEN_LIFESPAN</code> enlarges the Tier-C backstop). Lifetime is clamped at mint to <code>min(now+ttl, grant expiry)</code>, so a token never outlives its delegation grant. “Immediate” describes Tier A specifically; Tier B is bounded by your poll interval plus a 5s server cache. &nbsp;<a href="revocation.html">Full revocation design →</a></p>
+</div></section>
+
+<section id="deploy"><div class="wrap">
+  <div class="section-head"><span class="eyebrow">How it's deployed</span><h2>Who runs what</h2>
+    <p>Legant is an authorization server, so only one role runs a server. To <i>integrate</i> — to accept agent tokens in your API — you need nothing but the SDK: it verifies offline against the issuer's published keys, with no database and no callback.</p></div>
+  <div class="cards" style="grid-template-columns:repeat(2,1fr);margin-top:22px">
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M7 20h10M12 16v4"/></svg></div>
+      <h3>Operator — runs the issuer</h3>
+      <p>Stands up <code>legant serve</code> + Postgres in their own cloud (Docker / Kubernetes). It holds the signing keys, sessions, revocation state, and the audit chain. This is the only component that needs Postgres — and <code>docker compose up</code> brings its own.</p></div>
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="8" r="3.2"/><path d="M5 20c0-3.3 3.1-6 7-6s7 2.7 7 6"/></svg></div>
+      <h3>Agent author — gets tokens</h3>
+      <p>Builds the AI agent. It does an RFC 8693 token exchange against the issuer to get a short-lived “acting-for-Alice” token, then calls downstream APIs with it. Just app code talking to the issuer.</p></div>
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 4.5-3.3 7.5-8 9-4.7-1.5-8-4.5-8-9V7z"/><path d="M9 12l2 2 4-4"/></svg></div>
+      <h3>Resource-server dev — verifies offline</h3>
+      <p>Builds an API or MCP server that <i>accepts</i> agent tokens. Imports the <a href="https://github.com/legant-dev/legant">SDK</a>, fetches the issuer's JWKS once, and verifies + authorizes every token offline. No server to run, no Postgres, no per-request callback.</p></div>
+    <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 12l5 5L20 6"/></svg></div>
+      <h3>User — delegates</h3>
+      <p>The human who grants scoped authority to an agent through the browser consent flow, and can revoke it any time from a self-service page. Runs nothing.</p></div>
+  </div>
+  <p style="color:var(--ink-3);font-size:13.5px;margin-top:18px;max-width:88ch"><b style="color:var(--ink-2)">Self-hosted today</b> — you run the issuer in your own infrastructure; nothing leaves your environment. A hosted, multi-tenant <i>Legant Cloud</i> (we run the issuer; you only use the SDK) is a separate product on the roadmap.</p>
+</div></section>
+
+<section id="quickstart" style="border-top:1px solid var(--line)"><div class="wrap">
+  <div class="section-head"><span class="eyebrow">Quickstart</span><h2>Run a demo with no database, or stand up the full server</h2></div>
+  <pre style="margin-top:22px"><span class="c"># Demos run on a pure in-memory engine — no Postgres, no Docker.</span>
+go run ./examples/leash        <span class="c"># consumer kill-switch + offline revocation feed</span>
+go run ./examples/conductor    <span class="c"># MCP gateway: fresh per-call downstream tokens</span>
+go run ./examples/charter      <span class="c"># attenuation down an agent org chart</span>
+go run ./examples/honeytool    <span class="c"># prompt-injection tripwire</span>
+
+<span class="c"># Run the full OAuth 2.1 / OIDC + delegation server.</span>
+docker compose -f deployments/docker-compose.yml up -d   <span class="c"># → http://localhost:8080</span>
+
+<span class="c"># Or import the offline resource-server SDK into your own service.</span>
+go get github.com/legant-dev/legant</pre>
+</div></section>
+
+<section style="padding-top:8px"><div class="wrap">
+  <div class="section-head"><span class="eyebrow">Honest about its edges</span>
+    <h2>Built in Go, tested with the race detector</h2>
+    <p>Legant is open source and self-hostable: one binary, Postgres, and a pure delegation engine you can read end to end. We name the limits on the page rather than hiding them — “immediate” revocation means Tier A specifically, the 5m TTL is a configurable default not a hard ceiling, and the audit chain is tamper-evident (off-box anchors are roadmap, not shipped). If that precision is what you want from a security layer, clone it and run a demo — <a href="demos/leash.html">leash</a> shows the whole delegation-and-revocation story in under a minute, no database required.</p></div>
+  <div class="cta" style="display:flex;gap:11px;margin-top:22px">
+    <a class="btn gold" href="https://github.com/legant-dev/legant">Star on GitHub</a>
+    <a class="btn" href="demos/conductor.html">Watch the flagship demo</a>
+  </div>
+</div></section>
+
+<footer class="site"><div class="wrap row">
+  <span>Legant — open-source delegated authorization for AI agents · Apache 2.0</span>
+  <span><a href="https://github.com/legant-dev/legant">GitHub</a> · <a href="revocation.html">Revocation</a> · <a href="guard.html">Rule viewer</a> · <a href="#demos">Demos</a></span>
+</div></footer>
+</body>
+</html>

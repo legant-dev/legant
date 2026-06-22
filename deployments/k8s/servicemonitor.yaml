@@ -1,0 +1,37 @@
+# Prometheus Operator ServiceMonitors that scrape /metrics from the server and
+# gateway. Requires the Prometheus Operator CRDs. If you scrape Prometheus
+# directly instead, point it at the Services' /metrics path on port 80.
+#
+# NOTE: /metrics is unauthenticated by design (scrapers carry no user session).
+# Keep it reachable only from inside the cluster — do not expose it via Ingress.
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: legant
+  labels:
+    app.kubernetes.io/name: legant
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: legant
+      app.kubernetes.io/component: server
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: legant-gateway
+  labels:
+    app.kubernetes.io/name: legant
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: legant
+      app.kubernetes.io/component: gateway
+  endpoints:
+    - port: http
+      path: /metrics
+      interval: 30s

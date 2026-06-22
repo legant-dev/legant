@@ -1,0 +1,65 @@
+# GoReleaser config — cross-platform binaries, checksums, and a Homebrew tap.
+# Publish a release by pushing a tag:  git tag v0.1.0 && git push origin v0.1.0
+# (the release.yml workflow runs this). Validate locally:  goreleaser check
+# Build without publishing:  goreleaser build --snapshot --clean
+version: 2
+
+project_name: legant
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - id: legant
+    main: ./cmd/legant
+    binary: legant
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: legant
+    formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: github
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^chore:"
+      - "^test:"
+
+# Homebrew (macOS): pushes a cask to github.com/b-erdem/homebrew-tap (create that
+# repo once; the release token needs write access). Then: brew install b-erdem/tap/legant
+# (Linux/Windows users use the curl|sh installer or the release archives.)
+# Homebrew (macOS) — OPT-IN. To enable `brew install b-erdem/tap/legant`:
+#   1. create a public repo  github.com/b-erdem/homebrew-tap
+#   2. add a repo secret HOMEBREW_TAP_TOKEN (a PAT with write to that repo)
+#   3. uncomment the block below
+# Until then, the curl|sh installer + release archives cover macOS/Linux/Windows.
+# homebrew_casks:
+#   - name: legant
+#     repository:
+#       owner: b-erdem
+#       name: homebrew-tap
+#       token: '{{ index .Env "HOMEBREW_TAP_TOKEN" }}'
+#     homepage: "https://github.com/legant-dev/legant"
+#     description: "Open-source delegated authorization for AI agents — guard, gateway, issuer."
+
+release:
+  github:
+    owner: b-erdem
+    name: legant
+  prerelease: auto

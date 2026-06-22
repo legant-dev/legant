@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Charter — Legant live demo</title>
+<meta name="description" content="An agent-run company where the org chart is the authority graph. Re-delegation can only attenuate — drop a parent's budget and the whole subtree shrinks. A faithful replay of Legant's charter demo." />
+<link rel="stylesheet" href="../assets/legant.css" />
+<link rel="stylesheet" href="../assets/demo.css" />
+<style>
+  .ccols{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:18px}
+  @media(max-width:860px){.ccols{grid-template-columns:1fr}}
+  .treebox{padding:14px}
+</style>
+</head>
+<body>
+<div class="dwrap">
+  <h2 class="sr-only">A faithful replay of Legant's Charter demo: an agent company's org chart is its authority graph; re-delegation can only attenuate, so when the founder cuts Growth's budget from $500 to $50, the Bid sub-agent inherits the lower cap and a spend that was approved now bounces.</h2>
+
+  <header class="dtop">
+    <a class="brand" href="../index.html" style="text-decoration:none;color:var(--ink)">
+      <svg class="crown" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l3.5 3L12 5l5.5 6L21 8l-1.6 9.2a1 1 0 0 1-1 .8H5.6a1 1 0 0 1-1-.8L3 8z" fill="#e2b457"/><circle cx="3" cy="8" r="1.5" fill="#e2b457"/><circle cx="21" cy="8" r="1.5" fill="#e2b457"/><circle cx="12" cy="4" r="1.6" fill="#e2b457"/></svg>
+      Legant <span class="sub">Live demo · Charter</span></a>
+    <div class="dctrl">
+      <button class="dbtn" id="replay"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 3l14 9-14 9V3z"/></svg> Replay</button>
+      <button class="dbtn gold" id="cut" disabled>Cut Growth’s budget →</button>
+    </div>
+  </header>
+
+  <section class="dhero">
+    <h1>The org chart <i>is</i> the authority graph</h1>
+    <p class="tag">A founder grants a CEO agent a weekly budget; the CEO re-delegates thinner slices down the chain. Every seat’s spending power is a delegation <b>no agent can exceed</b>, and re-delegation can only ever <b>attenuate</b>. Caps are cryptographic, enforced offline at the ad platform — a faithful replay of <span class="m">go run ./examples/charter</span>.</p>
+  </section>
+
+  <div class="ccols">
+    <div class="panel">
+      <div class="hd"><span>the authority graph</span><span class="act" id="treelbl">weekly budgets</span></div>
+      <div class="treebox">
+        <div class="tree" id="tree">
+          <div class="node depth-1" data-seat="founder"><span class="seat">founder</span><span class="scopes">root authority</span></div>
+          <div class="node depth-2" data-seat="CEO"><span class="tedge">└─</span><span class="seat">CEO</span><span class="cap" data-cap="CEO">≤ $2000</span><span class="scopes">[hosting ads contractors]</span></div>
+          <div class="node depth-3" data-seat="Growth"><span class="tedge">├─</span><span class="seat">Growth</span><span class="cap" data-cap="Growth">≤ $500</span><span class="scopes">[ads]</span></div>
+          <div class="node depth-4" data-seat="Bid"><span class="tedge">│&nbsp;&nbsp;└─</span><span class="seat">Bid</span><span class="cap" data-cap="Bid">≤ $200</span><span class="scopes">[ads]</span></div>
+          <div class="node depth-3" data-seat="Ops"><span class="tedge">└─</span><span class="seat">Ops</span><span class="cap" data-cap="Ops">≤ $800</span><span class="scopes">[hosting contractors]</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="hd"><span>spend decisions · offline at the ad platform</span><span class="act" id="actlbl">booting…</span></div>
+      <div class="console" id="console"></div>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i style="background:#34d399"></i> approved — within every cap on the path</span>
+    <span><i style="background:#f47171"></i> declined — exceeds a cap (enforced offline, full provenance)</span>
+    <span><i style="background:#fbbf24"></i> attenuated — cap lowered by a parent</span>
+  </div>
+
+  <footer class="dfoot">
+    <span>Drop one parent’s budget and every sub-agent beneath it is instantly bounded by the lower cap — a child can never out-spend its parent.</span>
+    <span><a href="../index.html">← Legant</a> · <a href="https://github.com/legant-dev/legant">source</a></span>
+  </footer>
+</div>
+
+<script>
+const $ = s => document.querySelector(s);
+const cons = $('#console'), actlbl = $('#actlbl');
+let timers = [];
+const sleep = ms => new Promise(r => timers.push(setTimeout(r, ms)));
+const line = (html, cls) => { const d=document.createElement('div'); d.className='ln '+(cls||''); d.innerHTML=html; cons.appendChild(d); cons.scrollTop=cons.scrollHeight; return d; };
+const node = seat => document.querySelector('.node[data-seat="'+seat+'"]');
+const capEl = seat => document.querySelector('.cap[data-cap="'+seat+'"]');
+
+function spend(seat, amount, prov, cap, ok){
+  const n = node(seat); n.classList.add('flash');
+  setTimeout(()=>n.classList.remove('flash'), 700);
+  if(ok){
+    line('<span class="bdg b-ok">✓ 200</span><span class="body"><b>'+seat+'</b>: $'+amount+' ad → <span class="dec APPROVED">APPROVED $'+amount+'</span></span>');
+  } else {
+    line('<span class="bdg b-no">✕ 403</span><span class="body"><b>'+seat+'</b>: $'+amount+' ad → <span class="dec DECLINED">DECLINED</span> <span class="why">amount '+amount.toFixed(2)+' exceeds max_amount '+cap.toFixed(2)+'</span></span>');
+  }
+  line('<span class="arrow">↳</span> '+prov, 'note');
+}
+function resetTree(){
+  capEl('Growth').textContent='≤ $500'; capEl('Growth').classList.remove('cut');
+  capEl('Bid').textContent='≤ $200'; capEl('Bid').classList.remove('cut');
+}
+
+async function run(){
+  timers.forEach(clearTimeout); timers=[]; cons.innerHTML=''; resetTree(); $('#cut').disabled=true;
+  actlbl.textContent='spending within the chain'; await sleep(500);
+  line('1. spending within the chain','sect'); await sleep(500);
+  spend('Bid',150,'user:founder → agent:CEO → agent:Growth → agent:Bid',200,true); await sleep(900);
+  spend('Growth',300,'user:founder → agent:CEO → agent:Growth',500,true); await sleep(1000);
+
+  actlbl.textContent='a rogue / over-budget spend';
+  line('2. a rogue, over-budget spend','sect'); await sleep(500);
+  spend('Bid',400,'user:founder → agent:CEO → agent:Growth → agent:Bid',200,false); await sleep(1100);
+
+  actlbl.textContent='the founder cuts Growth’s budget';
+  line('3. the founder drags Growth’s weekly budget $500 → $50','sect'); await sleep(450);
+  $('#cut').disabled=false;
+  await cutBudget();
+
+  actlbl.textContent='the same spend now bounces';
+  line('4. the same $150 Bid spend now bounces — the whole subtree shrank','sect'); await sleep(500);
+  spend('Bid',150,'user:founder → agent:CEO → agent:Growth → agent:Bid',50,false); await sleep(600);
+  actlbl.textContent='run complete';
+}
+
+async function cutBudget(){
+  $('#cut').disabled=true;
+  const g=capEl('Growth'), b=capEl('Bid');
+  node('Growth').classList.add('flash'); node('Bid').classList.add('flash');
+  g.classList.add('cut'); g.textContent='≤ $50';
+  await sleep(450);
+  b.classList.add('cut'); b.textContent='≤ $50';
+  line('<span class="arrow">→</span> re-delegating Growth and its subtree at the new cap — Bid <b>inherits</b> the lower limit','note');
+  await sleep(700);
+  node('Growth').classList.remove('flash'); node('Bid').classList.remove('flash');
+}
+
+$('#replay').onclick = run;
+$('#cut').onclick = cutBudget;
+run();
+</script>
+</body>
+</html>

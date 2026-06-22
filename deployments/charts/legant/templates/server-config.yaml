@@ -1,0 +1,14 @@
+{{- include "legant.validate" . -}}
+# Non-secret configuration for `legant serve`. Secrets live in the Secret.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "legant.fullname" . }}-config
+  labels:
+    {{- include "legant.labels" . | nindent 4 }}
+data:
+  LEGANT_SERVER_HOST: "0.0.0.0"
+  LEGANT_SERVER_PORT: "8080"
+  LEGANT_ISSUER_URL: {{ .Values.issuer | quote }}
+  # Migrations run as a pre-install/pre-upgrade Hook Job, so auto-migrate is off.
+  LEGANT_DATABASE_AUTO_MIGRATE: "false"

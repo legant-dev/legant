@@ -1,0 +1,42 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: legant
+      POSTGRES_PASSWORD: legant
+      POSTGRES_DB: legant
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U legant"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  legant:
+    build:
+      context: ..
+      dockerfile: deployments/Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      LEGANT_DATABASE_URL: "postgres://legant:legant@postgres:5432/legant?sslmode=disable"
+      # Dev convenience: apply migrations on boot. In production run them as a
+      # separate pre-deploy step (`legant migrate up`) and leave this unset.
+      LEGANT_DATABASE_AUTO_MIGRATE: "true"
+      LEGANT_SERVER_HOST: "0.0.0.0"
+      LEGANT_SERVER_PORT: "8080"
+      LEGANT_ISSUER_URL: "http://localhost:8080"
+      LEGANT_SECRETS_SYSTEM: "change-me-to-a-32-byte-random-string!"
+      LEGANT_SECRETS_COOKIE: "change-me-to-another-32-byte-string!"
+      # Master key used to envelope-encrypt signing keys at rest. If unset it is
+      # derived from LEGANT_SECRETS_SYSTEM; set a distinct value in production.
+      LEGANT_SECRETS_KEY_ENCRYPTION: "change-me-to-a-distinct-32-byte-string"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+volumes:
+  pgdata:

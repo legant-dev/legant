@@ -1,0 +1,54 @@
+# Periodic audit-chain integrity check. `legant audit verify` exits non-zero if
+# the hash chain is broken (a row was edited, deleted, or reordered), which fails
+# the Job and surfaces via Job-failure alerting.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: legant-audit-verify
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: audit-verify
+spec:
+  schedule: "37 * * * *" # hourly
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 0 # a broken chain should not be "retried" into a pass
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: legant
+            app.kubernetes.io/component: audit-verify
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: verify
+              image: ghcr.io/legant-dev/legant:latest # pin to a digest in production
+              args: ["audit", "verify"]
+              # Only needs the database.
+              env:
+                - name: LEGANT_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: legant-secrets
+                      key: LEGANT_DATABASE_URL
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 128Mi

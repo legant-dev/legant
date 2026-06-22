@@ -1,0 +1,14 @@
+{{- if .Values.dashboard.enabled }}
+# The Legant overview dashboard, as a ConfigMap the Grafana sidecar auto-imports
+# (it watches for ConfigMaps carrying the configured label).
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "legant.fullname" . }}-dashboard
+  labels:
+    {{- include "legant.labels" . | nindent 4 }}
+    {{ .Values.dashboard.label }}: {{ .Values.dashboard.labelValue | quote }}
+data:
+  legant.json: |-
+    {{- .Files.Get "dashboards/legant.json" | nindent 4 }}
+{{- end }}

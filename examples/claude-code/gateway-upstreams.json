@@ -1,0 +1,22 @@
+[
+  {
+    "slug": "finance",
+    "inbound_audience": "https://gateway.you/mcp/finance",
+    "url": "https://finance-mcp.internal/mcp",
+    "resource_id": "https://finance-mcp.internal/",
+    "tool_scopes": {
+      "list_expenses": "expenses:read",
+      "submit_expense": "expenses:submit"
+    }
+  },
+  {
+    "slug": "github",
+    "inbound_audience": "https://gateway.you/mcp/github",
+    "url": "https://github-mcp.internal/mcp",
+    "resource_id": "https://github-mcp.internal/",
+    "tool_scopes": {
+      "list_issues": "repo:read",
+      "create_issue": "repo:write"
+    }
+  }
+]

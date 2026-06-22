@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/legant-dev/legant/security/advisories/new
+    about: Report a vulnerability privately — please do NOT open a public issue.
+  - name: Question / discussion
+    url: https://github.com/legant-dev/legant/discussions
+    about: Ask a question or discuss an idea before filing an issue.

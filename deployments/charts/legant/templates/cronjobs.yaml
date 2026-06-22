@@ -1,0 +1,106 @@
+{{- if .Values.cronjobs.retention.enabled }}
+# Nightly data-retention prune: expired sessions/tokens and dead delegation tokens.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "legant.fullname" . }}-retention
+  labels:
+    {{- include "legant.labels" . | nindent 4 }}
+    app.kubernetes.io/component: retention
+spec:
+  schedule: {{ .Values.cronjobs.retention.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            {{- include "legant.labels" . | nindent 12 }}
+            app.kubernetes.io/component: retention
+        spec:
+          restartPolicy: Never
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- include "legant.scheduling" . | nindent 10 }}
+          containers:
+            - name: prune
+              image: {{ include "legant.image" . | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args:
+                - maintenance
+                - prune
+                - --token-grace={{ .Values.cronjobs.retention.tokenGrace }}
+                {{- if .Values.cronjobs.retention.auditRetention }}
+                - --audit-retention={{ .Values.cronjobs.retention.auditRetention }}
+                {{- end }}
+              env:
+                - name: LEGANT_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "legant.secretName" . }}
+                      key: LEGANT_DATABASE_URL
+              securityContext:
+                {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 128Mi
+{{- end }}
+{{- if .Values.cronjobs.auditVerify.enabled }}
+---
+# Periodic audit-chain integrity check. `legant audit verify` exits non-zero if the
+# hash chain is broken (a row edited, deleted, or reordered), failing the Job.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: {{ include "legant.fullname" . }}-audit-verify
+  labels:
+    {{- include "legant.labels" . | nindent 4 }}
+    app.kubernetes.io/component: audit-verify
+spec:
+  schedule: {{ .Values.cronjobs.auditVerify.schedule | quote }}
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 5
+  jobTemplate:
+    spec:
+      backoffLimit: 0
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            {{- include "legant.labels" . | nindent 12 }}
+            app.kubernetes.io/component: audit-verify
+        spec:
+          restartPolicy: Never
+          securityContext:
+            {{- toYaml .Values.podSecurityContext | nindent 12 }}
+          {{- include "legant.scheduling" . | nindent 10 }}
+          containers:
+            - name: verify
+              image: {{ include "legant.image" . | quote }}
+              imagePullPolicy: {{ .Values.image.pullPolicy }}
+              args: ["audit", "verify"]
+              env:
+                - name: LEGANT_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: {{ include "legant.secretName" . }}
+                      key: LEGANT_DATABASE_URL
+              securityContext:
+                {{- toYaml .Values.containerSecurityContext | nindent 16 }}
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 128Mi
+{{- end }}

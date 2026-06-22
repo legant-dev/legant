@@ -1,0 +1,48 @@
+# Runs database migrations to completion BEFORE the Deployment rolls out. Apply
+# this and wait for it to succeed (`kubectl wait --for=condition=complete`) as a
+# pre-deploy step, or wire it as a Helm pre-install/pre-upgrade hook.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: legant-migrate
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: migrate
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: legant
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: ghcr.io/legant-dev/legant:latest # pin to a digest in production
+          args: ["migrate", "up"]
+          # Migrations only touch the database — inject just the DB URL.
+          env:
+            - name: LEGANT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: legant-secrets
+                  key: LEGANT_DATABASE_URL
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi

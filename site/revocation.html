@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Revocation, told honestly — Legant</title>
+<meta name="description" content="How Legant kills a token that's already signed and in the wild: three tiers (per-call store, signed offline feed, TTL backstop), and the worst case is never worse than the token's short TTL." />
+<link rel="stylesheet" href="assets/legant.css" />
+<style>
+  .doc-hero{padding:54px 0 14px}
+  .doc-hero h1{font-size:33px;letter-spacing:-.6px;max-width:20ch}
+  .doc-hero p{color:var(--ink-2);font-size:17px;max-width:70ch;margin-top:14px}
+  .prose{max-width:78ch}
+  .prose p{color:var(--ink-2);margin:14px 0}
+  .prose h2{font-size:22px;margin:40px 0 6px}
+  .prose h3{font-size:16px;margin:26px 0 6px;color:var(--ink)}
+  .prose code{background:var(--panel-2);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:12.5px}
+  .prose pre code{background:none;border:none;padding:0}
+  .prose ul{color:var(--ink-2);padding-left:20px}
+  .prose li{margin:8px 0}
+  .prose li b{color:var(--ink)}
+  blockquote.tension{border-left:2px solid var(--gold);background:var(--panel);border-radius:0 12px 12px 0;
+    padding:14px 18px;color:var(--ink);margin:18px 0;max-width:74ch}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Legant's revocation design: three tiers — per-call store check, a signed offline feed, and a TTL backstop — with the worst case never worse than the token's short TTL.</h2>
+
+<nav class="nav"><div class="wrap row">
+  <a class="brand" href="index.html">
+    <svg class="crown" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l3.5 3L12 5l5.5 6L21 8l-1.6 9.2a1 1 0 0 1-1 .8H5.6a1 1 0 0 1-1-.8L3 8z" fill="#e2b457"/><circle cx="3" cy="8" r="1.5" fill="#e2b457"/><circle cx="21" cy="8" r="1.5" fill="#e2b457"/><circle cx="12" cy="4" r="1.6" fill="#e2b457"/></svg>
+    Legant</a>
+  <div class="links">
+    <a href="index.html#problem" class="hide-sm">Why</a>
+    <a href="index.html#demos">Demos</a>
+    <a href="index.html#quickstart">Quickstart</a>
+    <a href="https://github.com/legant-dev/legant" class="btn ghost" style="padding:7px 13px">GitHub</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+  <header class="doc-hero">
+    <span class="eyebrow">Revocation</span>
+    <h1>How to kill a token that’s already signed and in the wild.</h1>
+    <p>Most agent-auth pitches promise “instant offline revocation,” which is physically impossible without a per-call round-trip. Legant gives you three real tiers and lets you pick the coupling you want — and the worst case is never worse than the token’s short TTL.</p>
+  </header>
+
+  <div class="prose">
+    <h2>The tension</h2>
+    <p>A delegation token is a self-contained, RS256-signed JWT. By construction it is <i>valid until it expires</i> — any holder of the issuer’s public key can verify it with <b>no callback</b> to Legant. That’s the whole point of offline authorization. But it’s also the problem: once minted, the token is unkillable by signature alone until its <code>exp</code> passes.</p>
+    <blockquote class="tension">Offline enforcement and instant revocation are only in tension if <b>one verifier must be both</b>. Legant doesn’t pretend a single mode squares that circle — it offers three tiers and lets you choose per verifier.</blockquote>
+    <p>A token id (<code>jti</code>) is recorded for every minted delegation token, and revocation is a denylist over those <code>jti</code>s — surfaced synchronously (Tier A), as a signed offline feed (Tier B), or not at all beyond the token’s own short TTL (Tier C).</p>
+
+    <h2>The three tiers</h2>
+  </div>
+
+  <div style="overflow:auto;margin:18px 0;max-width:100%">
+  <table class="tier">
+    <thead><tr><th style="width:185px">Tier</th><th>How</th><th style="width:205px">Latency</th><th style="width:215px">Coupling</th></tr></thead>
+    <tbody>
+      <tr><td><span class="badge a">A</span> <span class="tg">per-call store check</span></td>
+        <td>The MCP gateway and RFC 7662 introspection query the Postgres revocation store for the token’s <code>jti</code> on every call. Active only if the row exists, <code>revoked_at IS NULL</code>, and <code>exp</code> hasn’t passed. Unknown <code>jti</code> fails closed.</td>
+        <td class="lat">Immediate — the next call after the revoke commits is rejected.</td>
+        <td>Tightest: every verified call needs the issuer’s DB reachable; a store error is treated as not-active (reject).</td></tr>
+      <tr><td><span class="badge b">B</span> <span class="tg">signed feed</span><div style="font-family:var(--mono);font-size:11px;color:var(--ink-3);margin-top:4px">/.well-known/revoked</div></td>
+        <td>The issuer publishes a JWS-signed snapshot of revoked-but-unexpired <code>jti</code>s, signed with the <b>same JWKS key</b> (no new trust root) and stamped with a monotonic version. The SDK polls it on a timer and checks an in-memory set — <b>no per-request callback</b>.</td>
+        <td class="lat">Within your poll interval; ≤5s server cache; never later than token expiry.</td>
+        <td>Loose: fully offline at request time; the resource server only reaches the feed URL on its own polling timer.</td></tr>
+      <tr><td><span class="badge c">C</span> <span class="tg">TTL backstop</span></td>
+        <td>With no feed configured, the SDK validates signature / iss / aud / exp and the <code>act</code> claim; revocation is bounded by the token’s short TTL alone. This is also the default fail-open behavior when a feed is stale (fail-closed is opt-in).</td>
+        <td class="lat">Up to the token’s remaining TTL — it simply expires.</td>
+        <td>Zero: no DB, no feed, fully offline.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <div class="prose">
+    <p>Tier A and Tier B read the <b>same</b> <code>exchanged_tokens</code> table, so they’re consistent by construction: the feed is just an offline projection of the per-call denylist.</p>
+
+    <h3>The endpoint</h3>
+    <pre><code>GET /.well-known/revoked
+Content-Type: application/jwt
+Cache-Control: public, max-age=5</code></pre>
+    <p>The body is a single RS256-signed compact JWS whose claims are:</p>
+    <pre><code>{
+  "iss":  "https://issuer.example",
+  "iat":  1718900000,
+  "exp":  1718900060,        <span class="c">// iat + feedTTL (1m)</span>
+  "ver":  42,                <span class="c">// monotonic int64; verifiers reject a regress</span>
+  "jtis": ["...", "..."]     <span class="c">// sorted list of revoked, unexpired token ids</span>
+}</code></pre>
+
+    <h2>Tier B in two lines</h2>
+    <p>The resource server fetches the feed once, polls it in the background, and hands it to the verifier. No per-request callback after this.</p>
+    <pre><code><span class="c">// keysByKID is the same JWKS map the Verifier uses — no new trust root.</span>
+feed, err := sdk.<span class="k">FetchRevocationFeed</span>(ctx, issuer+<span class="s">"/.well-known/revoked"</span>, issuer, keysByKID)
+feed.<span class="k">StartPolling</span>(ctx, 10*time.Second, func(err error) { log.Print(err) }) <span class="c">// non-fatal</span>
+
+v := sdk.<span class="k">NewVerifier</span>(issuer, audience, keysByKID, sdk.<span class="k">WithRevocationFeed</span>(feed))
+claims, err := v.<span class="k">Verify</span>(token) <span class="c">// offline; returns sdk.ErrRevoked if the jti is in the feed</span></code></pre>
+    <p>To couple availability to freshness, opt in to fail-closed — <code>Verify</code> then rejects when the feed is staler than the bound:</p>
+    <pre><code>v := sdk.<span class="k">NewVerifier</span>(issuer, audience, keysByKID,
+    sdk.<span class="k">WithRevocationFeed</span>(feed),
+    sdk.<span class="k">WithFeedFailClosed</span>(30*time.Second), <span class="c">// default without this is fail-open-to-TTL</span>
+)</code></pre>
+
+    <h2>Safety properties</h2>
+    <ul>
+      <li><b>A stale or missing feed can only MISS a revocation, never forge one.</b> The feed is an additive denylist; <code>Verify</code> only ever <i>adds</i> a rejection — it never grants on the feed’s say-so, and all the normal signature / issuer / audience / expiry checks still run first. Token expiry is the always-present backstop.</li>
+      <li><b>The revoked set stays small.</b> The build query filters <code>revoked_at IS NOT NULL AND expires_at &gt; now()</code>, so expired tokens fall out automatically. Set size is bounded by revoke-rate × max TTL.</li>
+      <li><b>No new trust root.</b> The feed is signed with the same key published in the issuer’s JWKS, and the SDK verifies it with the same <code>keysByKID</code> map the verifier already uses.</li>
+      <li><b>Anti-rollback.</b> Each feed carries a monotonic <code>ver</code>. The SDK rejects a regressing version and keeps its current snapshot; the JWS also requires <code>iss</code> and <code>exp</code>.</li>
+      <li><b>Default fails OPEN to TTL; fail-closed is opt-in.</b> Without <code>WithFeedFailClosed</code>, a stale or unreachable feed reverts to TTL-bounded revocation rather than rejecting valid tokens.</li>
+    </ul>
+
+    <h2>What is <i>not</i> claimed</h2>
+    <ul>
+      <li><b>No zero-latency offline revocation.</b> “Immediate” applies to <b>Tier A only</b> — clients that do a synchronous per-call store check. For Tier B, a revoke propagates within the SDK’s poll interval plus up to the 5s server-side cache.</li>
+      <li><b>An air-gapped verifier is still bounded by the token TTL.</b> A Tier C verifier (or a stale, non-fail-closed Tier B one) can’t learn about a revocation out of band; the token is valid until it expires.</li>
+      <li><b>The 5m TTL is a configurable default, not a hard ceiling.</b> Raising <code>LEGANT_TOKEN_EXCHANGE_ACCESS_TOKEN_LIFESPAN</code> enlarges the Tier-C backstop. Tokens are clamped to <code>min(now+ttl, grant expiry)</code>, so a token never outlives its delegation grant.</li>
+      <li><b>The feed only denies — it never authenticates or authorizes.</b> It can’t revive an expired token, validate a signature, or grant access. Every positive decision still comes from the offline signature, issuer, audience, expiry, and <code>act</code>/constraint checks.</li>
+    </ul>
+  </div>
+
+  <footer class="site"><div class="row">
+    <span>See it live: <a href="demos/leash.html">the leash demo</a> revokes a token the agent already holds, offline at the merchant.</span>
+    <span><a href="index.html">← Legant</a> · <a href="https://github.com/legant-dev/legant">GitHub</a></span>
+  </div></footer>
+</div>
+</body>
+</html>

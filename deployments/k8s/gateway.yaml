@@ -1,0 +1,121 @@
+# The Legant MCP auth-gateway (`legant gateway`): per-tool delegation enforcement
+# in front of MCP servers. Its upstream registry is file-based config, mounted
+# from the legant-gateway-config ConfigMap at /etc/legant/legant.yaml.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: legant-gateway-config
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: gateway
+data:
+  legant.yaml: |
+    issuer:
+      url: https://auth.example.com
+    server:
+      host: 0.0.0.0
+      port: 8080
+    gateway:
+      upstreams:
+        - slug: weather
+          # The audience an inbound delegated token MUST carry for this slug.
+          # Unique per upstream so a token bound to one cannot be replayed at another.
+          inbound_audience: https://gateway.example.com/mcp/weather
+          url: http://weather-mcp.svc.cluster.local:9000/mcp
+          resource_id: https://weather-mcp.example.com/
+          tool_scopes:
+            get_weather: weather:read
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legant-gateway
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: legant
+      app.kubernetes.io/component: gateway
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: legant
+        app.kubernetes.io/component: gateway
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: gateway
+          image: ghcr.io/legant-dev/legant:latest # pin to a digest in production
+          args: ["gateway"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            # The gateway shares Legant's database (revocation + audit) and the
+            # key-encryption secret (to read the published signing keys).
+            - name: LEGANT_SECRETS_KEY_ENCRYPTION
+              valueFrom:
+                secretKeyRef:
+                  name: legant-secrets
+                  key: LEGANT_SECRETS_KEY_ENCRYPTION
+            - name: LEGANT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: legant-secrets
+                  key: LEGANT_DATABASE_URL
+          volumeMounts:
+            - name: config
+              mountPath: /etc/legant
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+      volumes:
+        - name: config
+          configMap:
+            name: legant-gateway-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: legant-gateway
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: gateway
+spec:
+  selector:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: gateway
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

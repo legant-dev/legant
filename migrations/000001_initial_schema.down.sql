@@ -1,0 +1,11 @@
+DROP TABLE IF EXISTS audit_events;
+DROP TABLE IF EXISTS signing_keys;
+DROP TABLE IF EXISTS oauth2_oidc_sessions;
+DROP TABLE IF EXISTS oauth2_pkce;
+DROP TABLE IF EXISTS oauth2_refresh_tokens;
+DROP TABLE IF EXISTS oauth2_access_tokens;
+DROP TABLE IF EXISTS oauth2_auth_codes;
+DROP TABLE IF EXISTS oauth2_clients;
+DROP TABLE IF EXISTS sessions;
+DROP TABLE IF EXISTS credentials;
+DROP TABLE IF EXISTS users;

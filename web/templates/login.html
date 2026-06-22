@@ -1,0 +1,33 @@
+{{define "title"}}Sign In{{end}}
+{{define "content"}}
+<div class="logo">
+    <h1>Legant</h1>
+    <p>Sign in to your account</p>
+</div>
+
+{{if .Error}}
+<div class="error">
+    {{if eq .Error "invalid_credentials"}}Invalid email or password.{{end}}
+    {{if eq .Error "missing_credentials"}}Please enter email and password.{{end}}
+</div>
+{{end}}
+
+<form method="POST" action="/login">
+    <input type="hidden" name="query" value="{{.Query}}">
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required autofocus placeholder="you@example.com">
+    </div>
+    <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required placeholder="Enter your password">
+    </div>
+    <button type="submit">Sign In</button>
+</form>
+
+<div class="link">
+    Don't have an account? <a href="/register?{{.Query}}">Sign up</a>
+</div>
+{{end}}
+
+{{template "layout" .}}

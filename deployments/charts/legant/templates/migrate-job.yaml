@@ -1,0 +1,49 @@
+{{- if .Values.migrate.enabled }}
+# Database migrations as a pre-install/pre-upgrade HOOK: Helm runs this to
+# completion BEFORE the server/gateway roll out, so migrations are always applied
+# first — the documented ordering, enforced. A failed migration aborts the release.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "legant.fullname" . }}-migrate
+  labels:
+    {{- include "legant.labels" . | nindent 4 }}
+    app.kubernetes.io/component: migrate
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "-5"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: {{ .Values.migrate.backoffLimit }}
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "legant.labels" . | nindent 8 }}
+        app.kubernetes.io/component: migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      {{- include "legant.scheduling" . | nindent 6 }}
+      containers:
+        - name: migrate
+          image: {{ include "legant.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args: ["migrate", "up"]
+          env:
+            - name: LEGANT_DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "legant.secretName" . }}
+                  key: LEGANT_DATABASE_URL
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 128Mi
+{{- end }}

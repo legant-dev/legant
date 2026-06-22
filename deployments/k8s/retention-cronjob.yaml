@@ -1,0 +1,59 @@
+# Nightly data-retention prune: expired sessions, used/expired email and
+# registration tokens, and delegation tokens dead beyond the grace window.
+# Audit retention is left disabled (--audit-retention 0) by default; set a
+# window only if your compliance policy allows deleting old audit events.
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: legant-retention
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: retention
+spec:
+  schedule: "17 3 * * *" # 03:17 daily
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      ttlSecondsAfterFinished: 3600
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: legant
+            app.kubernetes.io/component: retention
+        spec:
+          restartPolicy: Never
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+            - name: prune
+              image: ghcr.io/legant-dev/legant:latest # pin to a digest in production
+              args:
+                - maintenance
+                - prune
+                - --token-grace=720h
+                # - --audit-retention=8760h   # uncomment to purge audit > 1y
+              # Retention only touches the database — inject just the DB URL.
+              env:
+                - name: LEGANT_DATABASE_URL
+                  valueFrom:
+                    secretKeyRef:
+                      name: legant-secrets
+                      key: LEGANT_DATABASE_URL
+              securityContext:
+                allowPrivilegeEscalation: false
+                readOnlyRootFilesystem: true
+                capabilities:
+                  drop: ["ALL"]
+              resources:
+                requests:
+                  cpu: 50m
+                  memory: 64Mi
+                limits:
+                  cpu: 500m
+                  memory: 128Mi

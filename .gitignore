@@ -1,0 +1,49 @@
+# Binary (root-anchored so it does NOT match the cmd/legant SOURCE directory)
+/legant
+cmd/legant/legant
+/bin/
+# Compiled example binaries (built into the repo root by `go build ./examples/...`)
+/conductor
+/honeytool
+/leash
+/charter
+/agent-obo
+/mcp-gateway
+
+# Environment
+.env
+*.env
+
+# Local Legant guard setup (holds a local signing key + tokens — never commit)
+.legant-guard/
+# Offline setup written by `legant apply` / `legant mint` (local signing key + tokens)
+.legant/
+# Per-machine agent-guard configs written by `legant guard install` (absolute paths)
+.codex/
+.opencode/
+
+# Database
+*.db
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Go
+vendor/
+
+# Test
+coverage.out
+
+# Client SDK build artifacts
+clients/typescript/node_modules/
+clients/typescript/dist/
+clients/python/**/__pycache__/
+clients/python/*.egg-info/
+**/__pycache__/

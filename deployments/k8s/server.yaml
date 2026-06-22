@@ -1,0 +1,110 @@
+# The Legant authorization server (`legant serve`): OIDC/OAuth2 + the RFC 8693
+# token-exchange delegation endpoint. Stateless — scale horizontally; all state
+# is in Postgres.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: legant
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: legant
+      app.kubernetes.io/component: server
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: legant
+        app.kubernetes.io/component: server
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: legant
+          image: ghcr.io/legant-dev/legant:latest # pin to a digest in production
+          args: ["serve"]
+          ports:
+            - name: http
+              containerPort: 8080
+          envFrom:
+            - configMapRef:
+                name: legant-config
+            - secretRef:
+                name: legant-secrets
+          # /healthz is a pure liveness ping; /readyz also checks DB reachability,
+          # an active signing key, and that migrations are applied (and not dirty).
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            failureThreshold: 3
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: "1"
+              memory: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: legant
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: server
+spec:
+  selector:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: server
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# Horizontal autoscaling on CPU. Requires metrics-server.
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: legant
+  labels:
+    app.kubernetes.io/name: legant
+    app.kubernetes.io/component: server
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: legant
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: 70

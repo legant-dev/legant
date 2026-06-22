@@ -1,0 +1,17 @@
+{{define "title"}}Error{{end}}
+{{define "content"}}
+<div class="logo">
+    <h1>Legant</h1>
+    <p>Something went wrong</p>
+</div>
+
+<div class="error">
+    {{.Message}}
+</div>
+
+<div class="link">
+    <a href="/login">Back to login</a>
+</div>
+{{end}}
+
+{{template "layout" .}}

@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Legant Live — real-time agent authority</title>
+<style>
+  :root{
+    --bg:#0a0c10;--panel:#11141c;--panel-2:#161a24;--line:#222a38;--line-2:#2e3647;--line-3:#394355;
+    --ink:#e8ebf2;--ink-2:#9aa4b6;--ink-3:#69728a;--gold:#e2b457;--gold-2:#f0c771;--gold-dim:#caa047;
+    --allow:#34d399;--allow-bg:#0e2b22;--allow-line:#2e6b4f;--allow-ink:#86e9c4;
+    --deny:#f47171;--deny-bg:#2c1416;--deny-line:#6e3236;--deny-ink:#f3a6a6;
+    --revoke:#fbbf24;--revoke-bg:#2c2110;--revoke-line:#7a5a1e;--revoke-ink:#f5cf7a;
+    --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}html,body{margin:0}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:15px;
+    background-image:radial-gradient(1000px 560px at 80% -8%,#151c2c 0,rgba(10,12,16,0) 58%);}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 22px 60px}
+  a{color:var(--gold);text-decoration:none}
+  .bar{display:flex;align-items:center;gap:12px;padding:20px 0 8px}
+  .crown{width:24px;height:24px}
+  .bar h1{font-size:23px;font-weight:600;margin:0;letter-spacing:-.3px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--allow);position:relative}
+  .dot.off{background:var(--ink-3)}
+  .dot::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--allow);animation:pulse 1.6s ease-out infinite}
+  .dot.off::after{display:none}
+  @keyframes pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.8);opacity:0}}
+  .status{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+  .note{color:var(--ink-3);font-size:12.5px;margin:2px 0 0}
+  .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .tile .lab{color:var(--ink-3);font-size:11.5px;text-transform:uppercase;letter-spacing:.6px}
+  .tile .val{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:4px}
+  .tile.mint .val{color:var(--allow-ink)}.tile.deny .val{color:var(--deny-ink)}.tile.rev .val{color:var(--revoke-ink)}
+  .grid{display:grid;grid-template-columns:1.3fr .7fr;gap:14px}
+  @media(max-width:880px){.grid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .panel .hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;
+    border-bottom:1px solid var(--line);font-size:12px;color:var(--ink-2);letter-spacing:.5px;text-transform:uppercase}
+  .panel .hd .act{font-family:var(--mono);text-transform:none;letter-spacing:0;color:var(--gold);font-size:12px}
+  #graph{display:block;width:100%;height:480px}
+  .nlabel{font-family:var(--mono);font-size:11px;fill:var(--ink-2)}
+  .nlabel.u{fill:var(--gold);font-size:12px}
+  .empty-g{fill:var(--ink-3);font-family:var(--mono);font-size:12px}
+  .stream{font-family:var(--mono);font-size:12px;padding:8px 12px;height:480px;overflow:hidden}
+  .ev{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid #161c27;
+    opacity:0;transform:translateY(-4px);animation:evin .35s forwards}
+  @keyframes evin{to{opacity:1;transform:none}}
+  .ev .bd{flex:none;width:50px;text-align:center;border-radius:5px;font-size:10px;font-weight:600;padding:1px 0}
+  .bd.ALLOW,.bd.MINT{background:var(--allow-bg);color:var(--allow-ink);border:1px solid var(--allow-line)}
+  .bd.DENY{background:var(--deny-bg);color:var(--deny-ink);border:1px solid var(--deny-line)}
+  .bd.REVOKE{background:var(--revoke-bg);color:var(--revoke-ink);border:1px solid var(--revoke-line)}
+  .ev .tool{color:var(--ink)}.ev .why{color:var(--ink-3)}.ev .prov{color:var(--ink-3);font-size:11px}
+  .empty{color:var(--ink-3);font-family:var(--mono);font-size:12px;padding:16px}
+  .glegend{display:flex;gap:14px;flex-wrap:wrap;color:var(--ink-3);font-size:11.5px;padding:0 14px 12px}
+  .glegend span{display:inline-flex;align-items:center;gap:6px}.glegend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  footer{border-top:1px solid var(--line);margin-top:28px;padding-top:18px;color:var(--ink-3);font-size:13px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="bar">
+    <svg class="crown" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l3.5 3L12 5l5.5 6L21 8l-1.6 9.2a1 1 0 0 1-1 .8H5.6a1 1 0 0 1-1-.8L3 8z" fill="#e2b457"/></svg>
+    <span class="dot" id="livedot"></span>
+    <h1>Legant Live</h1>
+    <span class="status" id="status">connecting…</span>
+  </div>
+  <p class="note">Real-time activity from this server, the gateway, and every replica — fanned out over Postgres NOTIFY. Mints and revocations refresh the authority graph; gateway tool-call decisions stream on the right. <a href="/admin/audit">audit trail →</a></p>
+
+  <div class="tiles">
+    <div class="tile"><div class="lab">active delegations</div><div class="val" id="t-active">0</div></div>
+    <div class="tile mint"><div class="lab">tokens minted</div><div class="val" id="t-mint">0</div></div>
+    <div class="tile"><div class="lab">tool calls</div><div class="val" id="t-calls">0</div></div>
+    <div class="tile deny"><div class="lab">denied</div><div class="val" id="t-deny">0</div></div>
+    <div class="tile rev"><div class="lab">revocations</div><div class="val" id="t-rev">0</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="panel">
+      <div class="hd"><span>the living authority graph · who acts for whom</span><span class="act" id="gact">—</span></div>
+      <svg id="graph" viewBox="0 0 620 480" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Live delegation authority graph"></svg>
+      <div class="glegend">
+        <span><i style="background:#e2b457"></i> user</span>
+        <span><i style="background:#5dcaa5"></i> agent</span>
+        <span><i style="background:#85b7eb"></i> sub-agent</span>
+        <span><i style="background:#f47171"></i> active call</span>
+        <span style="color:var(--ink-2)">edges = active delegations · nodes pulse on each call</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="hd"><span>decision stream</span><span class="act" id="rate">live</span></div>
+      <div class="stream" id="stream"><div class="empty" id="emptymsg">waiting for activity…</div></div>
+    </div>
+  </div>
+
+  <footer>
+    <span>Fed by the same hash-chained audit + gateway-decision events the system records. SSE at <span style="font-family:var(--mono)">/admin/live/events</span>.</span>
+    <span><a href="/admin/audit">audit</a> · <a href="/account/delegations">my delegations</a></span>
+  </footer>
+</div>
+
+<script>
+const SVG='http://www.w3.org/2000/svg', W=620, H=480;
+const graph=document.getElementById('graph'), stream=document.getElementById('stream');
+let nodes=[], edges=[], byId={};
+const counts={active:0,mint:0,calls:0,deny:0,rev:0};
+
+function setTile(id,v){const el=document.getElementById(id);el.textContent=v;el.animate([{transform:'scale(1.22)'},{transform:'scale(1)'}],{duration:260});}
+function colOf(kind, inDepth){ return kind==='user'?0:((inDepth==null?0:inDepth)+1); }
+
+async function loadSnapshot(){
+  let g;
+  try{ const r=await fetch('/admin/live/snapshot',{credentials:'same-origin'}); if(!r.ok) return; g=await r.json(); }
+  catch(_){ return; }
+  const incoming={};
+  (g.edges||[]).forEach(e=>{ incoming[e.to]=Math.min(incoming[e.to]==null?99:incoming[e.to], e.depth); });
+  const next={};
+  (g.nodes||[]).forEach(n=>{
+    const col=colOf(n.kind, incoming[n.id]);
+    const prev=byId[n.id];
+    const node=prev||{id:n.id,x:120+col*170+(Math.random()*24-12),y:60+Math.random()*360,vx:0,vy:0,born:performance.now()};
+    node.label=n.label; node.kind=n.kind; node.col=col;
+    next[n.id]=node;
+  });
+  byId=next; nodes=Object.values(next);
+  edges=(g.edges||[]).filter(e=>byId[e.from]&&byId[e.to]);
+  counts.active=edges.length; setTile('t-active',counts.active);
+  document.getElementById('gact').textContent=nodes.length+' principals · '+edges.length+' delegations';
+}
+
+function step(){
+  for(const n of nodes){
+    let fx=(120+n.col*170-n.x)*0.06, fy=(H/2-n.y)*0.006;
+    for(const m of nodes){ if(m===n)continue; const dx=n.x-m.x,dy=n.y-m.y,d2=dx*dx+dy*dy+50; if(d2<16000){const f=1100/d2; fx+=dx/Math.sqrt(d2)*f; fy+=dy/Math.sqrt(d2)*f;} }
+    n.vx=(n.vx+fx)*0.82; n.vy=(n.vy+fy)*0.82;
+    n.x=Math.max(40,Math.min(W-30,n.x+n.vx*0.2)); n.y=Math.max(30,Math.min(H-24,n.y+n.vy*0.2));
+  }
+  render();
+}
+function render(){
+  const now=performance.now();
+  if(!nodes.length){ graph.innerHTML='<text class="empty-g" x="24" y="40">no active delegations yet — mint one and it appears here.</text>'; return; }
+  let s='';
+  for(const e of edges){ const a=byId[e.from],b=byId[e.to]; if(!a||!b)continue;
+    s+='<path d="M'+a.x.toFixed(1)+' '+a.y.toFixed(1)+' C'+(a.x+45).toFixed(1)+' '+a.y.toFixed(1)+' '+(b.x-45).toFixed(1)+' '+b.y.toFixed(1)+' '+b.x.toFixed(1)+' '+b.y.toFixed(1)+'" fill="none" stroke="#2b3445" stroke-width="1.4"/>'; }
+  for(const n of nodes){
+    const r=n.kind==='user'?9:(n.col>1?5:6.5);
+    let fill=n.kind==='user'?'#e2b457':(n.col>1?'#85b7eb':'#5dcaa5'), ring='';
+    if(n.flashUntil&&n.flashUntil>now){ fill=n.flashColor; ring='<circle cx="'+n.x.toFixed(1)+'" cy="'+n.y.toFixed(1)+'" r="'+(r+5)+'" fill="none" stroke="'+n.flashColor+'" stroke-width="1" opacity=".5"/>'; }
+    const a=Math.min(1,(now-(n.born||0))/350);
+    s+='<g opacity="'+a.toFixed(2)+'">'+ring+'<circle cx="'+n.x.toFixed(1)+'" cy="'+n.y.toFixed(1)+'" r="'+r+'" fill="'+fill+'"/>'+
+       '<text class="nlabel '+(n.kind==='user'?'u':'')+'" x="'+(n.x+r+5).toFixed(1)+'" y="'+(n.y+3).toFixed(1)+'">'+esc(n.label)+'</text></g>';
+  }
+  graph.innerHTML=s;
+}
+function esc(t){return (t||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');}
+function decClass(d){return ['ALLOW','DENY','MINT','REVOKE'].indexOf(d)>=0?d:'';}
+function shortSeg(seg){const i=seg.indexOf(':'); if(i<0)return seg; const k=seg.slice(0,i),v=seg.slice(i+1); return v.length>12?k+':'+v.slice(0,6):seg;}
+function pretty(prov){ if(!prov)return ''; return prov.split(/\s*(?:->|→)\s*/).map(s=>byId[s]?byId[s].label:shortSeg(s)).join(' → '); }
+function pulse(id,color){ const n=byId[id]; if(!n)return; n.flashColor=color; n.flashUntil=performance.now()+800; }
+
+let snapTimer=null;
+function scheduleSnapshot(){ if(snapTimer)return; snapTimer=setTimeout(()=>{snapTimer=null; loadSnapshot();},600); }
+
+function addLine(e){
+  const m=document.getElementById('emptymsg'); if(m)m.remove();
+  const d=document.createElement('div'); d.className='ev';
+  const main = e.tool ? esc(e.tool) : (e.type==='mint'?'token minted':e.type==='revoke'?'delegation revoked':esc(e.decision||e.type));
+  const why = e.reason ? ' <span class="why">'+esc(e.reason)+'</span>' : '';
+  const sub = e.provenance ? esc(pretty(e.provenance)) : (e.delegation?('delegation '+esc(shortSeg('d:'+e.delegation))):'');
+  d.innerHTML='<span class="bd '+decClass(e.decision)+'">'+esc(e.decision||e.type)+'</span>'+
+    '<div><span class="tool">'+main+'</span>'+why+(sub?'<br><span class="prov">'+sub+'</span>':'')+'</div>';
+  stream.insertBefore(d,stream.firstChild);
+  while(stream.children.length>16) stream.removeChild(stream.lastChild);
+}
+function onEvent(e){
+  addLine(e);
+  if(e.type==='decision'){ counts.calls++; setTile('t-calls',counts.calls); if(e.decision==='DENY'){counts.deny++; setTile('t-deny',counts.deny);} pulse(e.actor, e.decision==='DENY'?'#f47171':'#34d399'); }
+  else if(e.type==='mint'){ counts.mint++; setTile('t-mint',counts.mint); pulse(e.actor,'#34d399'); scheduleSnapshot(); }
+  else if(e.type==='revoke'){ counts.rev++; setTile('t-rev',counts.rev); scheduleSnapshot(); }
+}
+
+function connect(){
+  const es=new EventSource('/admin/live/events',{withCredentials:true});
+  es.onopen=()=>{ document.getElementById('status').textContent='live'; document.getElementById('livedot').classList.remove('off'); };
+  es.onmessage=ev=>{ let e; try{e=JSON.parse(ev.data);}catch(_){return;} onEvent(e); };
+  es.onerror=()=>{ document.getElementById('status').textContent='reconnecting…'; document.getElementById('livedot').classList.add('off'); };
+}
+
+loadSnapshot();
+setInterval(step,33);
+connect();
+</script>
+</body>
+</html>

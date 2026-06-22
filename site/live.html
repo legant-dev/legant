@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Legant Live — real-time agent authority</title>
+<meta name="description" content="A real-time console for agent authority: the living delegation graph (who acts for whom), a live tool-call decision stream, and revocations propagating in real time." />
+<link rel="stylesheet" href="assets/legant.css" />
+<style>
+  .livebar{display:flex;align-items:center;gap:12px;margin:18px 0 6px}
+  .livedot{width:9px;height:9px;border-radius:50%;background:var(--allow);position:relative}
+  .livedot::after{content:"";position:absolute;inset:-5px;border-radius:50%;border:1px solid var(--allow);animation:pulse 1.6s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(.6);opacity:.9}100%{transform:scale(1.8);opacity:0}}
+  .livebar h1{font-size:24px}
+  .livebar .note{margin-left:auto;color:var(--ink-3);font-size:12.5px;max-width:46ch;text-align:right}
+  .tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:16px 0}
+  @media(max-width:760px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:13px 15px}
+  .tile .lab{color:var(--ink-3);font-size:11.5px;text-transform:uppercase;letter-spacing:.6px}
+  .tile .val{font-family:var(--mono);font-size:26px;font-weight:600;margin-top:4px;transition:color .3s}
+  .tile.deny .val{color:var(--deny-ink)}.tile.rev .val{color:var(--revoke-ink)}.tile.mint .val{color:var(--allow-ink)}
+  .lgrid{display:grid;grid-template-columns:1.25fr .75fr;gap:14px}
+  @media(max-width:880px){.lgrid{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .panel .hd{display:flex;align-items:center;justify-content:space-between;padding:11px 14px;
+    border-bottom:1px solid var(--line);font-size:12px;color:var(--ink-2);letter-spacing:.5px;text-transform:uppercase}
+  .panel .hd .act{font-family:var(--mono);text-transform:none;letter-spacing:0;color:var(--gold);font-size:12px}
+  #graph{display:block;width:100%;height:470px;background:radial-gradient(600px 360px at 60% 30%,#10141e 0%,transparent 70%)}
+  .nlabel{font-family:var(--mono);font-size:11px;fill:var(--ink-2)}
+  .nlabel.u{fill:var(--gold);font-size:12px}
+  .stream{font-family:var(--mono);font-size:12px;padding:8px 12px;height:470px;overflow:hidden}
+  .ev{display:flex;gap:8px;align-items:baseline;padding:4px 0;border-bottom:1px solid #161c27;
+    opacity:0;transform:translateY(-4px);animation:evin .35s forwards}
+  @keyframes evin{to{opacity:1;transform:none}}
+  .ev .bd{flex:none;width:46px;text-align:center;border-radius:5px;font-size:10px;font-weight:600;padding:1px 0}
+  .bd.ok{background:var(--allow-bg);color:var(--allow-ink);border:1px solid var(--allow-line)}
+  .bd.no{background:var(--deny-bg);color:var(--deny-ink);border:1px solid var(--deny-line)}
+  .bd.rv{background:var(--revoke-bg);color:var(--revoke-ink);border:1px solid var(--revoke-line)}
+  .ev .tool{color:var(--ink)}
+  .ev .prov{color:var(--ink-3);font-size:11px}
+  .controls{display:flex;gap:9px}
+  .dbtn{font-family:inherit;font-size:13px;color:var(--ink);background:var(--panel-2);border:1px solid var(--line-2);
+    border-radius:9px;padding:7px 12px;cursor:pointer;display:inline-flex;align-items:center;gap:7px}
+  .dbtn:hover{border-color:var(--line-3);background:#1b2130}
+  .dbtn.gold{color:#1a1407;background:linear-gradient(180deg,var(--gold-2),var(--gold-dim));border-color:var(--gold-2);font-weight:600}
+  .glegend{display:flex;gap:14px;flex-wrap:wrap;color:var(--ink-3);font-size:11.5px;padding:0 14px 12px}
+  .glegend span{display:inline-flex;align-items:center;gap:6px}
+  .glegend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+  .lgrid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+  @media(max-width:880px){.lgrid2{grid-template-columns:1fr}}
+  .blast{display:flex;gap:20px;align-items:center;padding:14px 16px}
+  .tier-legend{font-family:var(--mono);font-size:12px;flex:1}
+  .tier-legend .row{display:flex;align-items:center;gap:8px;margin:9px 0}
+  .tier-legend i{width:10px;height:10px;border-radius:50%;flex:none}
+  .tier-legend b{color:var(--ink)} .tier-legend .lat{color:var(--gold-dim);margin-left:auto}
+  .budget{padding:12px 15px}
+  .bmeter{margin:11px 0;font-family:var(--mono);font-size:12px}
+  .bmeter .top{display:flex;justify-content:space-between;color:var(--ink-2)}
+  .bmeter .top .declined{color:var(--deny-ink);opacity:0;transition:opacity .25s}
+  .bmeter.flash .top .declined{opacity:1}
+  .bmeter .bar{height:8px;border-radius:5px;background:var(--panel-2);border:1px solid var(--line);overflow:hidden;margin-top:5px}
+  .bmeter .fill{height:100%;width:0;background:var(--allow);transition:width .5s ease, background .3s}
+  .bmeter.warn .fill{background:var(--revoke)} .bmeter.over .fill{background:var(--deny)}
+</style>
+</head>
+<body>
+<h2 class="sr-only">Legant Live: a real-time console showing the delegation authority graph, a stream of tool-call decisions, and revocations propagating across agent chains.</h2>
+
+<nav class="nav"><div class="wrap row">
+  <a class="brand" href="index.html">
+    <svg class="crown" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 8l3.5 3L12 5l5.5 6L21 8l-1.6 9.2a1 1 0 0 1-1 .8H5.6a1 1 0 0 1-1-.8L3 8z" fill="#e2b457"/><circle cx="3" cy="8" r="1.5" fill="#e2b457"/><circle cx="21" cy="8" r="1.5" fill="#e2b457"/><circle cx="12" cy="4" r="1.6" fill="#e2b457"/></svg>
+    Legant</a>
+  <div class="links">
+    <a href="index.html#demos">Demos</a>
+    <a href="revocation.html" class="hide-sm">Revocation</a>
+    <a href="https://github.com/legant-dev/legant" class="btn ghost" style="padding:7px 13px">GitHub</a>
+  </div>
+</div></nav>
+
+<div class="wrap">
+  <div class="livebar">
+    <span class="livedot" aria-hidden="true"></span>
+    <h1>Legant Live</h1>
+    <div class="controls">
+      <button class="dbtn" id="pause"><svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg> Pause</button>
+      <button class="dbtn gold" id="revoke">Revoke a chain →</button>
+    </div>
+  </div>
+  <p class="note" style="color:var(--ink-3);font-size:12.5px;margin:0 0 4px">Simulated stream for illustration — wired to a real <span style="font-family:var(--mono);color:var(--gold)">/admin/live</span> SSE feed of audit + gateway events, this <i>is</i> your production console: every node and line below already exists in Legant’s data.</p>
+
+  <div class="tiles">
+    <div class="tile"><div class="lab">active delegations</div><div class="val" id="t-active">0</div></div>
+    <div class="tile mint"><div class="lab">tokens minted</div><div class="val" id="t-mint">0</div></div>
+    <div class="tile"><div class="lab">tool calls</div><div class="val" id="t-calls">0</div></div>
+    <div class="tile deny"><div class="lab">denied</div><div class="val" id="t-deny">0</div></div>
+    <div class="tile rev"><div class="lab">revocations</div><div class="val" id="t-rev">0</div></div>
+  </div>
+
+  <div class="lgrid">
+    <div class="panel">
+      <div class="hd"><span>the living authority graph · who acts for whom</span><span class="act" id="gact">streaming</span></div>
+      <svg id="graph" viewBox="0 0 620 470" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Live delegation graph"></svg>
+      <div class="glegend">
+        <span><i style="background:#e2b457"></i> user</span>
+        <span><i style="background:#5dcaa5"></i> agent</span>
+        <span><i style="background:#85b7eb"></i> sub-agent</span>
+        <span><i style="background:#f47171"></i> denied / revoked</span>
+        <span style="color:var(--ink-2)">edges = active delegations · nodes pulse on each call</span>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="hd"><span>decision stream</span><span class="act" id="rate">live</span></div>
+      <div class="stream" id="stream"></div>
+    </div>
+  </div>
+
+  <div class="lgrid2">
+    <div class="panel">
+      <div class="hd"><span>revocation blast-radius · kill latency by tier</span><span class="act" id="blastact">idle</span></div>
+      <div class="blast">
+        <svg viewBox="0 0 200 200" width="170" height="170" aria-hidden="true">
+          <circle id="ringC" cx="100" cy="100" r="8" fill="none" stroke="#fbbf24" stroke-width="2" opacity="0"/>
+          <circle id="ringB" cx="100" cy="100" r="8" fill="none" stroke="#5fa8f5" stroke-width="2" opacity="0"/>
+          <circle id="ringA" cx="100" cy="100" r="8" fill="none" stroke="#34d399" stroke-width="3" opacity="0"/>
+          <circle cx="100" cy="100" r="6" fill="#f47171"/>
+        </svg>
+        <div class="tier-legend">
+          <div class="row"><i style="background:#34d399"></i><b>Tier A</b> per-call store <span class="lat">instant</span></div>
+          <div class="row"><i style="background:#5fa8f5"></i><b>Tier B</b> signed feed <span class="lat">≤ poll interval</span></div>
+          <div class="row"><i style="background:#fbbf24"></i><b>Tier C</b> TTL backstop <span class="lat">≤ token TTL</span></div>
+          <p style="color:var(--ink-3);margin:10px 0 0;font-family:var(--sans);font-size:12px">A revoke reaches each verifier at its tier’s latency — never worse than the token’s short TTL.</p>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <div class="hd"><span>budget burn-down · caps are cryptographic, not vibes</span><span class="act">offline at the merchant</span></div>
+      <div class="budget" id="budget"></div>
+    </div>
+  </div>
+
+  <footer class="site"><div class="row">
+    <span>How it’s fed in production: an SSE stream of the same hash-chained audit + gateway-decision events the system already records — provenance, tool, decision, and the active delegation set.</span>
+    <span><a href="index.html">← Legant</a> · <a href="revocation.html">Revocation</a></span>
+  </div></footer>
+</div>
+
+<script>
+const SVG='http://www.w3.org/2000/svg';
+const graph=document.getElementById('graph'), stream=document.getElementById('stream');
+const W=620,H=470;
+const USERS=[{id:'user:alice',y:120},{id:'user:bob',y:250},{id:'user:founder',y:380}];
+const AGENTNAMES=['conductor','assistant','summarizer','ceo','growth','planner','scout','broker'];
+const SUBNAMES=['deal-finder','bid','ops','worker','indexer'];
+const TOOLS_OK=['read_file','query','create_comment','status','read_document','summarize','search','list_runs'];
+const DENIES=[['drop_table','tool not delegated'],['charge','missing scope payments:write'],['exfiltrate_secrets','honeytool — denied'],['wire_funds','exceeds max_amount'],['merge_to_main','tool not delegated'],['query','wrong audience (replayed)']];
+
+let nodes=[], edges=[], paused=false, seq=0;
+const counts={active:0,mint:0,calls:0,deny:0,rev:0};
+let rnd=1234567; const rand=()=>{rnd=(rnd*1103515245+12345)&0x7fffffff;return rnd/0x7fffffff;};
+const pick=a=>a[Math.floor(rand()*a.length)];
+
+USERS.forEach((u,i)=>nodes.push({id:u.id,label:u.id,kind:'user',depth:0,x:120,y:u.y,ax:120,ay:u.y,vx:0,vy:0,born:0}));
+
+function add(label,kind,parentId){
+  const p=nodes.find(n=>n.id===parentId);
+  const id=label+'#'+(seq++);
+  const depth=p.depth+1;
+  const n={id,label,kind,depth,x:p.x+70+rand()*30,y:p.y+(rand()*80-40),ax:0,ay:0,vx:0,vy:0,born:performance.now(),parent:parentId};
+  nodes.push(n); edges.push({a:parentId,b:id});
+  counts.active++; counts.mint++; bump('t-active',counts.active); bump('t-mint',counts.mint);
+  return n;
+}
+function descendants(id){const out=[];const walk=p=>edges.filter(e=>e.a===p).forEach(e=>{out.push(e.b);walk(e.b);});walk(id);return out;}
+function remove(ids){const s=new Set(ids);nodes=nodes.filter(n=>!s.has(n.id));edges=edges.filter(e=>!s.has(e.a)&&!s.has(e.b));}
+
+function bump(id,v){const el=document.getElementById(id);el.textContent=v;el.style.color='';el.animate([{transform:'scale(1.25)'},{transform:'scale(1)'}],{duration:280});}
+function logEvent(cls,tool,prov,reason){
+  const d=document.createElement('div');d.className='ev';
+  const bd=cls==='ok'?'<span class="bd ok">ALLOW</span>':cls==='no'?'<span class="bd no">DENY</span>':'<span class="bd rv">REVOKE</span>';
+  d.innerHTML=bd+'<div><span class="tool">'+tool+'</span>'+(reason?' <span class="prov">'+reason+'</span>':'')+'<br><span class="prov">'+prov+'</span></div>';
+  stream.insertBefore(d,stream.firstChild);
+  while(stream.children.length>14) stream.removeChild(stream.lastChild);
+}
+function provOf(n){const chain=[];let c=n;while(c){chain.unshift(c.label);c=c.parent?nodes.find(x=>x.id===c.parent):null;}return chain.join(' → ');}
+function flash(n,color){n._flash=color;n._flashUntil=performance.now()+700;}
+
+// physics
+function step(){
+  const TARGET={0:120,1:300,2:470};
+  for(const n of nodes){
+    if(n.kind==='user'){const uy=USERS.find(u=>u.id===n.id).y;n.x+=(120-n.x)*.2;n.y+=(uy-n.y)*.2;continue;}
+    let fx=(TARGET[n.depth]-n.x)*.06, fy=0;
+    for(const m of nodes){if(m===n)continue;const dx=n.x-m.x,dy=n.y-m.y;const d2=dx*dx+dy*dy+40;if(d2<14000){const f=900/d2;fx+=dx/Math.sqrt(d2)*f;fy+=dy/Math.sqrt(d2)*f;}}
+    const p=nodes.find(x=>x.id===n.parent);if(p){fy+=(p.y-n.y)*.04;}
+    fy+=(H/2-n.y)*.005;
+    n.vx=(n.vx+fx)*.82;n.vy=(n.vy+fy)*.82;
+    n.x=Math.max(40,Math.min(W-30,n.x+n.vx*.18));
+    n.y=Math.max(34,Math.min(H-26,n.y+n.vy*.18));
+  }
+  render();
+}
+function render(){
+  const now=performance.now();
+  let s='';
+  for(const e of edges){const a=nodes.find(n=>n.id===e.a),b=nodes.find(n=>n.id===e.b);if(!a||!b)continue;
+    s+='<path d="M'+a.x+' '+a.y+' C'+(a.x+50)+' '+a.y+' '+(b.x-50)+' '+b.y+' '+b.x+' '+b.y+'" fill="none" stroke="#2b3445" stroke-width="1.4"/>';}
+  for(const n of nodes){
+    const r=n.kind==='user'?9:n.kind==='agent'?6.5:5;
+    let fill=n.kind==='user'?'#e2b457':n.kind==='agent'?'#5dcaa5':'#85b7eb';
+    let ring='none';
+    if(n._flashUntil&&n._flashUntil>now){fill=n._flash;ring=n._flash;}
+    const a=Math.min(1,(now-(n.born||0))/350);
+    s+='<g opacity="'+a+'">';
+    if(ring!=='none') s+='<circle cx="'+n.x+'" cy="'+n.y+'" r="'+(r+5)+'" fill="none" stroke="'+ring+'" stroke-width="1" opacity=".5"/>';
+    s+='<circle cx="'+n.x+'" cy="'+n.y+'" r="'+r+'" fill="'+fill+'"/>';
+    s+='<text class="nlabel '+(n.kind==='user'?'u':'')+'" x="'+(n.x+r+5)+'" y="'+(n.y+3)+'">'+(n.kind==='user'?n.label:'agent:'+n.label)+'</text>';
+    s+='</g>';
+  }
+  graph.innerHTML=s;
+}
+
+function tick(){
+  if(paused)return;
+  const r=rand();
+  const agents=nodes.filter(n=>n.kind!=='user');
+  if(agents.length<4 || r<0.28){ // spawn an agent under a user
+    if(nodes.filter(n=>n.kind!=='user').length<11){ add(pick(AGENTNAMES),'agent',pick(USERS).id); }
+  } else if(r<0.40){ // spawn a sub-agent under an agent
+    const parents=nodes.filter(n=>n.kind==='agent'); if(parents.length){const p=pick(parents); if(descendants(p.id).length<2) add(pick(SUBNAMES),'sub',p.id);}
+  } else if(r<0.86){ // a tool call
+    const n=pick(agents);
+    counts.calls++; bump('t-calls',counts.calls);
+    if(rand()<0.78){flash(n,'#34d399');logEvent('ok',n.label+' · '+pick(TOOLS_OK),provOf(n));}
+    else{const d=pick(DENIES);flash(n,'#f47171');counts.deny++;bump('t-deny',counts.deny);logEvent('no',n.label+' · '+d[0],provOf(n),d[1]);}
+  } else { // a revocation
+    autoRevoke();
+  }
+}
+function autoRevoke(){
+  const agents=nodes.filter(n=>n.kind==='agent'); if(!agents.length)return;
+  const target=pick(agents); const subtree=[target.id,...descendants(target.id)];
+  subtree.forEach(id=>{const n=nodes.find(x=>x.id===id);if(n)flash(n,'#f47171');});
+  fireBlast();
+  counts.rev++; bump('t-rev',counts.rev);
+  logEvent('rv',target.label+' · delegation revoked',provOf(target),subtree.length>1?('+'+(subtree.length-1)+' sub-agent'+(subtree.length>2?'s':'')):'');
+  setTimeout(()=>{counts.active=Math.max(0,counts.active-subtree.length);bump('t-active',counts.active);remove(subtree);},760);
+}
+
+document.getElementById('pause').onclick=e=>{paused=!paused;e.currentTarget.innerHTML=paused?'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M5 3l14 9-14 9V3z"/></svg> Resume':'<svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg> Pause';document.getElementById('gact').textContent=paused?'paused':'streaming';};
+document.getElementById('revoke').onclick=autoRevoke;
+
+// ---- revocation blast-radius ----
+function fireBlast(){
+  document.getElementById('blastact').textContent='revoked';
+  [['ringA',420],['ringB',1300],['ringC',2600]].forEach(([id,dur])=>{
+    document.getElementById(id).animate([{r:'8px',opacity:.85},{r:'92px',opacity:0}],{duration:dur,easing:'ease-out'});
+  });
+  setTimeout(()=>{document.getElementById('blastact').textContent='idle';},2700);
+}
+
+// ---- budget burn-down ----
+const BUDGETS=[{name:'agent:ads-buyer',cap:500,spent:0},{name:'agent:growth',cap:800,spent:0},{name:'agent:ops',cap:300,spent:0}];
+function renderBudget(){
+  document.getElementById('budget').innerHTML=BUDGETS.map((b,i)=>{
+    const pct=Math.min(100,Math.round(b.spent/b.cap*100));
+    const cls=pct>=100?'over':pct>=80?'warn':'';
+    return '<div class="bmeter '+cls+'" id="bm'+i+'"><div class="top"><span>'+b.name+'</span>'+
+      '<span>$'+Math.round(b.spent)+' / $'+b.cap+' <span class="declined">· over-cap spend declined</span></span></div>'+
+      '<div class="bar"><div class="fill" style="width:'+pct+'%"></div></div></div>';
+  }).join('');
+}
+function budgetTick(){
+  if(paused)return;
+  const i=Math.floor(rand()*BUDGETS.length), b=BUDGETS[i];
+  if(rand()<0.07){ b.spent=0; renderBudget(); return; } // a fresh weekly cycle
+  const amt=Math.round(20+rand()*200);
+  if(b.spent+amt<=b.cap){ b.spent+=amt; }
+  else { const m=document.getElementById('bm'+i); if(m){m.classList.add('flash'); setTimeout(()=>m.classList.remove('flash'),900);} }
+  renderBudget();
+}
+renderBudget();
+
+setInterval(step,33);
+setInterval(tick,900);
+setInterval(budgetTick,1100);
+for(let i=0;i<3;i++) add(pick(AGENTNAMES),'agent',pick(USERS).id);
+</script>
+</body>
+</html>

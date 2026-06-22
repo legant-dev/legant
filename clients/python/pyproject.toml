@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "legant-sdk"
+version = "0.1.0"
+description = "Offline verifier + authorizer for Legant delegation tokens (RFC 8693 sub/act), with Tier-B revocation-feed support."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "Apache-2.0"
+dependencies = ["cryptography>=3.4"]
+keywords = ["legant", "delegation", "rfc8693", "oauth2", "ai-agents", "mcp", "authorization"]
+
+[project.urls]
+Homepage = "https://github.com/legant-dev/legant/tree/main/clients/python"
+Repository = "https://github.com/legant-dev/legant"
+Issues = "https://github.com/legant-dev/legant/issues"
+
+[tool.setuptools.packages.find]
+include = ["legant_sdk*"]

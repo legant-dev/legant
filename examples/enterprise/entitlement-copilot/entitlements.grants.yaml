@@ -1,0 +1,25 @@
+# Per-user data entitlements as reviewable config. After a user signs in via your
+# IdP (OIDC/SSO), Legant issues them a delegation token scoped to THESE schemas;
+# the shared analytics copilot acts on their behalf and can reach nothing more.
+#   legant apply -f entitlements.grants.yaml --dir ./.legant
+version: 1
+audience: warehouse://analytics
+defaults:
+  ttl: 1h
+
+grants:
+  # Alice is in finance — she may read sales AND finance.
+  - name: alice
+    principal: user:alice
+    agent: agent:analytics-copilot
+    scopes: [warehouse:query]
+    constraints:
+      resources: [sales, finance]
+
+  # Bob is a sales rep — sales only. The copilot must not read finance for him.
+  - name: bob
+    principal: user:bob
+    agent: agent:analytics-copilot
+    scopes: [warehouse:query]
+    constraints:
+      resources: [sales]
