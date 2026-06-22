@@ -1,0 +1,35 @@
+name: Publish SDK to PyPI
+
+# Publishes the Python SDK (clients/python -> legant-sdk) via PyPI Trusted
+# Publishing (OIDC) — no API token. Runs on every published GitHub release, and can
+# be triggered manually for the first publish.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+permissions:
+  id-token: write # OIDC token for PyPI trusted publishing
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build the SDK
+        working-directory: clients/python
+        run: |
+          python -m pip install --upgrade pip build
+          python -m build
+
+      - name: Publish to PyPI (trusted publishing)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: clients/python/dist
