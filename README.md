@@ -4,6 +4,9 @@ Open-source delegated authorization for AI agents. Legant lets an AI agent act o
 behalf of a user with authority you can scope, time-box, revoke, and audit. It's
 written in Go and ships as a single self-hostable binary.
 
+**Website and live demos:** https://legant-dev.github.io/legant/ ·
+**Releases:** https://github.com/legant-dev/legant/releases
+
 ## What makes Legant different
 
 A plain OIDC/OAuth server (Keycloak, Ory, Zitadel) can authenticate an agent and
