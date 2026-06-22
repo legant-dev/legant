@@ -4,9 +4,9 @@ All notable changes to Legant are documented here. The format is loosely based o
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning once it reaches `1.0`.
 
-## [Unreleased]
+## [0.1.0] — 2026-06-23
 
-The pre-1.0 development line. Highlights of what exists today:
+The first public release. Highlights:
 
 ### Core
 
