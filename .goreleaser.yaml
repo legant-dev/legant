@@ -41,18 +41,18 @@ changelog:
       - "^chore:"
       - "^test:"
 
-# Homebrew (macOS): pushes a cask to github.com/b-erdem/homebrew-tap (create that
-# repo once; the release token needs write access). Then: brew install b-erdem/tap/legant
+# Homebrew (macOS): pushes a cask to github.com/legant-dev/homebrew-tap (create that
+# repo once; the release token needs write access). Then: brew install legant-dev/tap/legant
 # (Linux/Windows users use the curl|sh installer or the release archives.)
-# Homebrew (macOS) — OPT-IN. To enable `brew install b-erdem/tap/legant`:
-#   1. create a public repo  github.com/b-erdem/homebrew-tap
+# Homebrew (macOS) — OPT-IN. To enable `brew install legant-dev/tap/legant`:
+#   1. create a public repo  github.com/legant-dev/homebrew-tap
 #   2. add a repo secret HOMEBREW_TAP_TOKEN (a PAT with write to that repo)
 #   3. uncomment the block below
 # Until then, the curl|sh installer + release archives cover macOS/Linux/Windows.
 # homebrew_casks:
 #   - name: legant
 #     repository:
-#       owner: b-erdem
+#       owner: legant-dev
 #       name: homebrew-tap
 #       token: '{{ index .Env "HOMEBREW_TAP_TOKEN" }}'
 #     homepage: "https://github.com/legant-dev/legant"
@@ -60,6 +60,6 @@ changelog:
 
 release:
   github:
-    owner: b-erdem
+    owner: legant-dev
     name: legant
   prerelease: auto
