@@ -4,6 +4,30 @@ All notable changes to Legant are documented here. The format is loosely based o
 [Keep a Changelog](https://keepachangelog.com/), and the project aims to follow
 semantic versioning once it reaches `1.0`.
 
+## [0.1.1] - 2026-06-23
+
+A documentation and onboarding release. No breaking changes.
+
+### Added
+
+- `docs/GETTING_STARTED.md`: an end-to-end walkthrough that defines a grant, mints a
+  token, enforces it at your own endpoint, and revokes it, all offline (no database).
+- Reference guides: `docs/CONCEPTS.md`, `docs/GRANTS.md`, `docs/AGENT_AUTHOR.md`,
+  `docs/GATEWAY.md`.
+- `examples/protect-your-endpoint/`: a runnable resource server that verifies tokens
+  from a local `.legant` setup (`make demo-protect`).
+- A local-file revocation-feed loader in all three SDKs: `ParseRevocationFeed` (Go),
+  `parseRevocationFeed` (TypeScript), `parse_revocation_feed` (Python). It is the
+  offline counterpart of the fetch-from-URL helpers.
+- `legant mint --principal` as an alias for `--user`, and a `make help` target.
+
+### Changed
+
+- Restructured the README quick start into three lanes (define authority, protect your
+  API, govern a coding agent) and added a documentation index.
+- Corrected the attenuation wording: over-broad scopes are rejected, over-broad
+  constraints are clamped to the parent (previously stated as rejected).
+
 ## [0.1.0] — 2026-06-23
 
 The first public release. Highlights:

@@ -11,7 +11,7 @@ export {
   type RateLimit,
   type VerifierOptions,
 } from './verifier.js';
-export { RevocationFeed, fetchRevocationFeed } from './revocation.js';
+export { RevocationFeed, fetchRevocationFeed, parseRevocationFeed } from './revocation.js';
 export { AgentGuard, type TokenSource, type ToolGuardOptions } from './agentguard.js';
 export {
   bearerToken,

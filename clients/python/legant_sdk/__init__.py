@@ -8,7 +8,7 @@ from .middleware import (
     flask_require,
     mcp_tool_name,
 )
-from .revocation import RevocationFeed, fetch_revocation_feed
+from .revocation import RevocationFeed, fetch_revocation_feed, parse_revocation_feed
 from .verifier import (
     Action,
     AuthorizeError,
@@ -32,6 +32,7 @@ __all__ = [
     "fetch_jwks",
     "RevocationFeed",
     "fetch_revocation_feed",
+    "parse_revocation_feed",
     "authenticate",
     "bearer_token",
     "fastapi_auth",

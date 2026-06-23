@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "legant-sdk"
-version = "0.1.0"
+version = "0.1.1"
 description = "Offline verifier + authorizer for Legant delegation tokens (RFC 8693 sub/act), with Tier-B revocation-feed support."
 readme = "README.md"
 requires-python = ">=3.9"

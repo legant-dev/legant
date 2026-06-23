@@ -1,11 +1,12 @@
 name: Publish SDK to PyPI
 
 # Publishes the Python SDK (clients/python -> legant-sdk) via PyPI Trusted
-# Publishing (OIDC) — no API token. Runs on every published GitHub release, and can
-# be triggered manually for the first publish.
+# Publishing (OIDC), no API token. Run it manually from the Actions tab when the
+# Python SDK version changes. It is intentionally NOT tied to GitHub releases: the
+# SDKs version independently from the CLI, so a CLI release tag should not trigger a
+# duplicate PyPI publish. Requires a configured Trusted Publisher on the PyPI
+# project (owner legant-dev, repo legant, workflow publish-pypi.yml, environment pypi).
 on:
-  release:
-    types: [published]
   workflow_dispatch:
 
 permissions:

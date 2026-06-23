@@ -93,3 +93,14 @@ def fetch_revocation_feed(feed_url: str, issuer: str, keys: dict) -> RevocationF
     f = RevocationFeed(feed_url, issuer, keys)
     f.refresh()
     return f
+
+
+def parse_revocation_feed(feed_jwt: str | bytes, issuer: str, keys: dict) -> RevocationFeed:
+    """Verify a signed revocation feed read from a string or bytes (for example a
+    local feed.jwt file written by ``legant apply`` / ``legant revoke``), with no
+    HTTP. The offline counterpart of ``fetch_revocation_feed``: same signature and
+    version checks, no network. To pick up later revocations, parse the file again.
+    """
+    f = RevocationFeed(None, issuer, keys)
+    f.apply_feed(feed_jwt.decode() if isinstance(feed_jwt, bytes) else feed_jwt)
+    return f

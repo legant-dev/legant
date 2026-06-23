@@ -1,6 +1,6 @@
 {
   "name": "@legant/sdk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Offline verifier + authorizer for Legant delegation tokens (RFC 8693 sub/act), with Tier-B revocation-feed support. Zero runtime dependencies.",
   "type": "module",
   "main": "dist/src/index.js",

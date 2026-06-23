@@ -80,3 +80,19 @@ export async function fetchRevocationFeed(
   await f.refresh();
   return f;
 }
+
+/**
+ * Verifies a signed revocation feed read from a string (for example a local
+ * feed.jwt file written by `legant apply` / `legant revoke`), with no HTTP. The
+ * offline counterpart of fetchRevocationFeed: same signature and version checks,
+ * no network. To pick up later revocations, parse the string again.
+ */
+export function parseRevocationFeed(
+  feedJWT: string,
+  issuer: string,
+  keys: Map<string, KeyObject>,
+): RevocationFeed {
+  const f = new RevocationFeed(null, issuer, keys);
+  f.applyFeed(feedJWT);
+  return f;
+}

@@ -1,7 +1,7 @@
 .PHONY: help build run test lint clean migrate-up migrate-down docker-up docker-down demo demo-gateway demo-conductor demo-honeytool demo-leash demo-charter demo-helpdesk demo-cloudops demo-twoasks demo-splice demo-driftstop demo-foureyes demo-blastdoor demo-protect demo-aisre demo-breach demo-copilot demos
 
 BINARY=legant
-VERSION?=0.1.0
+VERSION?=0.1.1
 LDFLAGS=-ldflags "-X main.version=$(VERSION)"
 
 .DEFAULT_GOAL := help
