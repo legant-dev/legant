@@ -1,5 +1,11 @@
 # Legant
 
+[![Go Reference](https://pkg.go.dev/badge/github.com/legant-dev/legant/sdk.svg)](https://pkg.go.dev/github.com/legant-dev/legant/sdk)
+[![npm](https://img.shields.io/npm/v/@legant/sdk?label=npm&color=cb3837)](https://www.npmjs.com/package/@legant/sdk)
+[![PyPI](https://img.shields.io/pypi/v/legant-sdk?label=pypi&color=3775a9)](https://pypi.org/project/legant-sdk/)
+[![CI](https://github.com/legant-dev/legant/actions/workflows/ci.yml/badge.svg)](https://github.com/legant-dev/legant/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/license-Apache--2.0-blue)](LICENSE)
+
 Open-source delegated authorization for AI agents. Legant lets an AI agent act on
 behalf of a user with authority you can scope, time-box, revoke, and audit. It's
 written in Go and ships as a single self-hostable binary.
@@ -235,9 +241,9 @@ Any service that accepts Legant delegation tokens can verify and authorize them
 the full constraint PDP, and the Tier-B revocation feed — with no callback to
 Legant. Three SDKs implement the identical behavior:
 
-- **Go** — [`sdk`](sdk) (`github.com/legant-dev/legant/sdk`), depends only on golang-jwt.
-- **TypeScript / Node** — [`clients/typescript`](clients/typescript) (`@legant/sdk`), **zero runtime deps** (built-in `crypto`).
-- **Python** — [`clients/python`](clients/python) (`legant-sdk`), depends only on `cryptography`.
+- **Go** — [`sdk`](sdk): `go get github.com/legant-dev/legant/sdk` (only depends on golang-jwt). Docs on [pkg.go.dev](https://pkg.go.dev/github.com/legant-dev/legant/sdk).
+- **TypeScript / Node** — [`clients/typescript`](clients/typescript): `npm i @legant/sdk` (zero runtime deps; built-in `crypto`).
+- **Python** — [`clients/python`](clients/python): `pip install legant-sdk` (only depends on `cryptography`).
 
 They cannot silently drift: **golden conformance vectors minted by the real Go
 signer** ([`clients/conformance`](clients/conformance)) are run against all three.
