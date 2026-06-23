@@ -59,8 +59,24 @@ func FetchRevocationFeed(ctx context.Context, feedURL, issuer string, keysByKID 
 	return f, nil
 }
 
-// Refresh fetches the feed, verifies its signature (RS256 under the issuer's
-// kid), enforces a monotonic version, and atomically swaps the in-memory set.
+// ParseRevocationFeed verifies a signed revocation feed read from bytes (for
+// example a local feed.jwt file written by `legant apply` / `legant revoke`), with
+// no HTTP. It is the offline counterpart of FetchRevocationFeed: same signature
+// and version checks, no network. To pick up later revocations, parse the file
+// again. keysByKID is the same JWKS key map the Verifier uses.
+func ParseRevocationFeed(feedJWT []byte, issuer string, keysByKID map[string]*rsa.PublicKey) (*RevocationFeed, error) {
+	f := &RevocationFeed{
+		issuer: issuer, keys: keysByKID,
+		revoked: map[string]struct{}{},
+	}
+	if err := f.apply(feedJWT); err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+// Refresh fetches the feed and applies it (verify signature, enforce a monotonic
+// version, atomically swap the in-memory set).
 func (f *RevocationFeed) Refresh(ctx context.Context) error {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, f.url, nil)
 	if err != nil {
@@ -78,7 +94,12 @@ func (f *RevocationFeed) Refresh(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	return f.apply(body)
+}
 
+// apply verifies the feed JWT (RS256 under the issuer's kid), enforces a
+// monotonic version, and atomically swaps the in-memory revoked set.
+func (f *RevocationFeed) apply(body []byte) error {
 	c := &feedClaims{}
 	if _, err := jwt.ParseWithClaims(string(body), c, func(t *jwt.Token) (interface{}, error) {
 		kid, _ := t.Header["kid"].(string)

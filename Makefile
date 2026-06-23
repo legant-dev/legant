@@ -1,8 +1,30 @@
-.PHONY: build run test clean migrate-up migrate-down docker-up docker-down demo demo-gateway demo-conductor demo-honeytool demo-leash demo-charter demo-helpdesk demo-cloudops demo-twoasks demo-splice demo-driftstop demo-foureyes demo-blastdoor demo-aisre demo-breach demo-copilot demos
+.PHONY: help build run test lint clean migrate-up migrate-down docker-up docker-down demo demo-gateway demo-conductor demo-honeytool demo-leash demo-charter demo-helpdesk demo-cloudops demo-twoasks demo-splice demo-driftstop demo-foureyes demo-blastdoor demo-protect demo-aisre demo-breach demo-copilot demos
 
 BINARY=legant
 VERSION?=0.1.0
 LDFLAGS=-ldflags "-X main.version=$(VERSION)"
+
+.DEFAULT_GOAL := help
+
+help:
+	@echo "Legant make targets:"
+	@echo ""
+	@echo "  Build and run"
+	@echo "    build            build the legant binary into bin/"
+	@echo "    run              run the issuer (needs Postgres; see docs/GETTING_STARTED.md)"
+	@echo "    test             go test -race -cover ./..."
+	@echo ""
+	@echo "  Try it (Go only, no database or Docker)"
+	@echo "    demos            run every self-contained walkthrough back to back"
+	@echo "    demo-driftstop   replay the Salesloft-Drift / UNC6395 breach on a survivable token"
+	@echo "    demo-conductor   one agent across a fleet of MCP servers, with a flight recorder"
+	@echo "    demo-leash       one-hour account access with an offline kill-switch"
+	@echo "    (full gallery: grep '^demo' Makefile, or see the README)"
+	@echo ""
+	@echo "  Learn to use it"
+	@echo "    docs/GETTING_STARTED.md   bound your first agent end to end (no database)"
+	@echo ""
+	@echo "  Run 'make <target>'."
 
 build:
 	go build $(LDFLAGS) -o bin/$(BINARY) ./cmd/legant
@@ -62,6 +84,11 @@ demo-foureyes:
 # demo-blastdoor — k8s MCP gateway: filtered tools/list, change freeze, mid-loop kill.
 demo-blastdoor:
 	go run ./examples/blastdoor
+
+# demo-protect — bound your own HTTP endpoint end to end: define a grant, mint a
+# token, and watch allow / deny-by-constraint / deny-by-revocation. Go only.
+demo-protect:
+	./examples/protect-your-endpoint/run.sh
 
 # demo-aisre — ENTERPRISE, INTEGRATED: a real kind cluster + real mcp-server-kubernetes
 # behind a Legant-guarded proxy. Requires docker/kind/kubectl/npx. (Self-contained

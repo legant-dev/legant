@@ -18,6 +18,8 @@ cmd/legant/legant
 .legant-guard/
 # Offline setup written by `legant apply` / `legant mint` (local signing key + tokens)
 .legant/
+# Scratch grants file from `legant init grants` at the repo root (in your own project, commit it)
+/legant.grants.yaml
 # Per-machine agent-guard configs written by `legant guard install` (absolute paths)
 .codex/
 .opencode/

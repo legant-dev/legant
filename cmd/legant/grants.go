@@ -98,7 +98,7 @@ func applyCmd() *cobra.Command {
 				return err
 			}
 			if s.Created() {
-				fmt.Printf("initialized offline setup in %s (key.pem, jwks.json, feed.jwt) — add it to .gitignore\n", s.Dir)
+				fmt.Printf("initialized offline setup in %s (key.pem, jwks.json, feed.jwt). Add it to .gitignore\n", s.Dir)
 			}
 			res, err := f.Apply(s, force, now)
 			if err != nil {
@@ -131,7 +131,7 @@ func applyCmd() *cobra.Command {
 }
 
 func mintCmd() *cobra.Command {
-	var dir, user, agent, audience, scopes, start, end, tz string
+	var dir, user, principal, agent, audience, scopes, start, end, tz string
 	var categories, tools, resources []string
 	var weekdays []int
 	var maxAmount float64
@@ -145,8 +145,11 @@ func mintCmd() *cobra.Command {
 			"key (from config + the DB keystore), so a live gateway/resource server accepts\n" +
 			"it. For repeatable, reviewable authority prefer a grants file + `legant apply`.",
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if user == "" {
+				user = principal // --principal is an alias for --user (matches the grants.yaml key)
+			}
 			if user == "" || agent == "" {
-				return fmt.Errorf("--user and --agent are required")
+				return fmt.Errorf("--user (or --principal) and --agent are required")
 			}
 			sc := splitScopes(scopes)
 			if len(sc) == 0 {
@@ -184,6 +187,7 @@ func mintCmd() *cobra.Command {
 	cmd.Flags().BoolVar(&useKeystore, "keystore", false, "sign with the server's DB keystore key (for a live deployment) instead of the local key")
 	cmd.Flags().StringVar(&dir, "dir", ".legant", "offline setup dir (key/JWKS/feed)")
 	cmd.Flags().StringVar(&user, "user", "", "the delegating principal (e.g. user:alice)")
+	cmd.Flags().StringVar(&principal, "principal", "", "alias for --user (matches the grants.yaml `principal:` key)")
 	cmd.Flags().StringVar(&agent, "agent", "", "the agent principal (e.g. agent:copilot)")
 	cmd.Flags().StringVar(&audience, "audience", "", "the resource-server audience (RFC 8707)")
 	cmd.Flags().StringVar(&scopes, "scopes", "", "comma/space-separated capability scopes")
@@ -282,7 +286,7 @@ func revokeCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Printf("revoked %s — published feed version %d\n", jti, ver)
+			fmt.Printf("revoked %s, published feed version %d\n", jti, ver)
 			return nil
 		},
 	}

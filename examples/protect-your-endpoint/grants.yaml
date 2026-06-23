@@ -1,0 +1,21 @@
+# A minimal grant for the "protect your own endpoint" walkthrough.
+# Time-window free, so the allow/deny result is the same whenever you run it.
+#
+#   legant apply -f examples/protect-your-endpoint/grants.yaml   # mints into .legant/
+#
+# alice lets her analytics copilot query the warehouse, but only the sales and
+# finance schemas. A request for any other schema (e.g. hr) is denied at the
+# resource server, offline, from the token alone.
+version: 1
+audience: warehouse://analytics
+defaults:
+  ttl: 1h
+
+grants:
+  - name: alice-warehouse
+    principal: user:alice
+    agent: agent:analytics-copilot
+    scopes: [warehouse:query]
+    audience: warehouse://analytics
+    constraints:
+      resources: [sales, finance]   # RFC 8707 audiences the token may target
