@@ -10,6 +10,10 @@ Open-source delegated authorization for AI agents. Legant lets an AI agent act o
 behalf of a user with authority you can scope, time-box, revoke, and audit. It's
 written in Go and ships as a single self-hostable binary.
 
+![Legant replays the Salesloft–Drift / UNC6395 OAuth token theft on a delegation token that survives it](docs/images/driftstop.gif)
+
+<sub>`make demo-driftstop` — the same stolen-token replay that hit ~700 orgs, against a Legant token: no bulk export, no secret-bearing records, no audience pivot, minutes of life, and a one-entry offline kill. The theft still happens; the blast radius is what changes.</sub>
+
 **Website and live demos:** https://legant-dev.github.io/legant/ ·
 **Releases:** https://github.com/legant-dev/legant/releases
 
