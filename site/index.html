@@ -67,6 +67,7 @@
     <a href="live.html" style="display:inline-flex;align-items:center;gap:6px"><span style="width:7px;height:7px;border-radius:50%;background:var(--allow);display:inline-block"></span>Live</a>
     <a href="#revocation" class="hide-sm">Revocation</a>
     <a href="#quickstart" class="hide-sm">Quickstart</a>
+    <a href="https://github.com/legant-dev/legant/blob/main/docs/GETTING_STARTED.md" class="hide-sm">Docs</a>
     <a href="https://github.com/legant-dev/legant" class="btn ghost" style="padding:7px 13px">GitHub</a>
   </div>
 </div></nav>
@@ -131,7 +132,7 @@
       <p>On <code>tools/call</code> the gateway never forwards the inbound token — it mints a fresh, single-tool, audience-bound downstream token. <code>tools/list</code> is filtered to the delegated tools and fails closed if unparseable; duplicate JSON keys and JSON-RPC batches are rejected to close parser-differential attacks.</p></div>
     <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M8 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-3M14 4h6v6M20 4l-9 9"/></svg></div>
       <h3>Offline resource-server SDKs — Go, TypeScript, Python</h3>
-      <p>Accepting agent tokens in your API takes one import: verify + authorize fully offline (RS256 + kid + iss + aud + exp, requires an <code>act</code> chain) plus the Tier-B revocation feed — no Legant dependency, no per-request callback. Three SDKs kept in lockstep by golden conformance vectors minted from the real signer, so they can't drift.</p></div>
+      <p>Accepting agent tokens in your API takes a few lines: verify + authorize fully offline (RS256 + kid + iss + aud + exp, requires an <code>act</code> chain) plus the Tier-B revocation feed — no Legant dependency, no per-request callback. Three SDKs kept in lockstep by golden conformance vectors minted from the real signer, so they can't drift.</p></div>
     <div class="card"><div class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M5 7h14M5 12h14M5 17h14"/><circle cx="3.5" cy="7" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="17" r="1"/></svg></div>
       <h3>Tamper-evident, hash-chained audit</h3>
       <p>Every audit row is SHA-256 hash-chained inside Postgres under an advisory lock. <code>legant audit verify</code> pinpoints the first edited, reordered, or truncated row against a pinned anchor. Tamper-<i>evident</i>, not tamper-proof — off-box anchors are on the roadmap for the both-tables-compromised case.</p></div>
@@ -222,18 +223,19 @@
 </div></section>
 
 <section id="quickstart" style="border-top:1px solid var(--line)"><div class="wrap">
-  <div class="section-head"><span class="eyebrow">Quickstart</span><h2>Run a demo with no database, or stand up the full server</h2></div>
-  <pre style="margin-top:22px"><span class="c"># Demos run on a pure in-memory engine — no Postgres, no Docker.</span>
+  <div class="section-head"><span class="eyebrow">Quickstart</span><h2>Define what an agent may do, then enforce it offline</h2></div>
+  <pre style="margin-top:22px"><span class="c"># 1. Declare authority in a reviewable file and mint signed tokens. No Postgres, no Docker.</span>
+legant init grants
+legant apply -f legant.grants.yaml            <span class="c"># mints signed tokens into .legant/</span>
+legant who-can -f legant.grants.yaml --scope warehouse:query --resource finance
+
+<span class="c"># 2. Enforce those tokens at your own API, offline, and watch the whole loop:</span>
+make demo-protect                             <span class="c"># define -&gt; mint -&gt; allow / deny / revoke</span>
+
+<span class="c"># Or just watch the delegation engine: pure in-memory, no Docker.</span>
 go run ./examples/leash        <span class="c"># consumer kill-switch + offline revocation feed</span>
-go run ./examples/conductor    <span class="c"># MCP gateway: fresh per-call downstream tokens</span>
-go run ./examples/charter      <span class="c"># attenuation down an agent org chart</span>
-go run ./examples/honeytool    <span class="c"># prompt-injection tripwire</span>
-
-<span class="c"># Run the full OAuth 2.1 / OIDC + delegation server.</span>
-docker compose -f deployments/docker-compose.yml up -d   <span class="c"># → http://localhost:8080</span>
-
-<span class="c"># Or import the offline resource-server SDK into your own service.</span>
-go get github.com/legant-dev/legant</pre>
+go run ./examples/conductor    <span class="c"># MCP gateway: fresh per-call downstream tokens</span></pre>
+  <p style="color:var(--ink-2);font-size:15px;margin-top:16px">Full walkthrough: <a href="https://github.com/legant-dev/legant/blob/main/docs/GETTING_STARTED.md">Getting started</a> &nbsp;·&nbsp; all guides: <a href="https://github.com/legant-dev/legant/tree/main/docs">github.com/legant-dev/legant/docs</a> &nbsp;·&nbsp; run the issuer: <code>docker compose -f deployments/docker-compose.yml up -d</code></p>
 </div></section>
 
 <section style="padding-top:8px"><div class="wrap">
@@ -248,7 +250,7 @@ go get github.com/legant-dev/legant</pre>
 
 <footer class="site"><div class="wrap row">
   <span>Legant — open-source delegated authorization for AI agents · Apache 2.0</span>
-  <span><a href="https://github.com/legant-dev/legant">GitHub</a> · <a href="revocation.html">Revocation</a> · <a href="guard.html">Rule viewer</a> · <a href="#demos">Demos</a></span>
+  <span><a href="https://github.com/legant-dev/legant">GitHub</a> · <a href="https://github.com/legant-dev/legant/blob/main/docs/GETTING_STARTED.md">Getting started</a> · <a href="https://github.com/legant-dev/legant/tree/main/docs">Docs</a> · <a href="revocation.html">Revocation</a> · <a href="#demos">Demos</a></span>
 </div></footer>
 </body>
 </html>

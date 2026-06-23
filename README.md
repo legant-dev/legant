@@ -17,6 +17,8 @@ written in Go and ships as a single self-hostable binary.
 **Website and live demos:** https://legant-dev.github.io/legant/ ·
 **Releases:** https://github.com/legant-dev/legant/releases
 
+**New here?** [Bound your first agent in a few minutes](docs/GETTING_STARTED.md) (no database), or jump to: [what it is](#what-makes-legant-different) · [try a demo](#try-it--the-demo-gallery) · [quick start](#quick-start) · [documentation](#documentation).
+
 ## What makes Legant different
 
 A plain OIDC/OAuth server (Keycloak, Ory, Zitadel) can authenticate an agent and
@@ -34,7 +36,9 @@ spawns can only ever do less."* Legant's core is exactly that:
   alone — no callback to Legant. A rolling-hour rate cap is enforced by Legant at
   mint time (it needs shared state a resource server lacks).
 - **Monotonic attenuation.** Authority can only ever *narrow* as it is
-  re-delegated down a chain; escalation is rejected at delegation time.
+  re-delegated down a chain: a child that asks for a broader scope is rejected,
+  and a looser constraint (a bigger amount, an extra category) is clamped down to
+  the parent's.
 
 The canonical engine for this lives in [`internal/delegation`](internal/delegation)
 (pure, unit-tested) and there's a runnable, no-database demo in
@@ -129,6 +133,9 @@ To *integrate* with Legant you need only the Go SDK (verify a token against the 
 
 ## Quick Start
 
+Three ways in, by what you want to do. The first two need only Go: no database, no
+Docker. The full, end-to-end walkthrough is [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md).
+
 ### Install the CLI
 
 ```bash
@@ -139,43 +146,76 @@ curl -fsSL https://raw.githubusercontent.com/legant-dev/legant/main/install.sh |
 go install github.com/legant-dev/legant/cmd/legant@latest
 ```
 
-Then govern any coding agent in one command:
+### A. Define and inspect authority (no database)
+
+Declare what an agent may do in a reviewable `legant.grants.yaml`, mint the signed
+tokens locally, and ask who can do what. All offline.
 
 ```bash
-legant guard install     # Claude Code / Codex / opencode  (see docs/CLAUDE_CODE.md)
+legant init grants                          # writes a commented starter
+legant lint  -f legant.grants.yaml          # validate (CI-gateable)
+legant apply -f legant.grants.yaml          # mints signed tokens into .legant/ (no Postgres)
+legant who-can -f legant.grants.yaml --scope warehouse:query --resource finance
+```
+
+Every field is documented in [docs/GRANTS.md](docs/GRANTS.md).
+
+### B. Protect your own API (no database)
+
+Verify and authorize those tokens at your own resource server, offline, with the
+SDK. The whole loop (define, mint, enforce, revoke) runs in one command:
+
+```bash
+make demo-protect      # see examples/protect-your-endpoint
+```
+
+Walk it step by step in [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md), or
+generate a starter for your framework: `legant init resource-server --framework
+go-chi` (also express, fastify, fastapi, flask, go-nethttp, mcp-go).
+
+### C. Govern a coding agent
+
+`legant guard install` wires a PreToolUse hook into Claude Code, Codex, or opencode
+that authorizes every tool call against a delegation token, offline. This is one
+adapter on top of the same engine, not the whole product.
+
+```bash
+legant guard install     # see docs/CLAUDE_CODE.md
 legant guard demo        # see it work, no setup
 ```
 
-Container image (for running the issuer): `ghcr.io/legant-dev/legant:latest`. Releases
-are cut by pushing a `v*` tag (see [`.goreleaser.yaml`](.goreleaser.yaml) +
-[`.github/workflows/release.yml`](.github/workflows/release.yml)).
+### Run the issuer (only for live token exchange)
 
-### Running the issuer — Prerequisites
-- Go 1.26+
-- PostgreSQL 16+
-- Docker & Docker Compose (optional)
-
-### Using Docker Compose
+Lanes A and B need no server. To have agents fetch tokens from a running issuer via
+RFC 8693 (see [docs/AGENT_AUTHOR.md](docs/AGENT_AUTHOR.md)), run `legant serve`. It
+needs Go 1.26+ and PostgreSQL 16+; the bundled compose brings its own:
 
 ```bash
-docker compose -f deployments/docker-compose.yml up -d
+docker compose -f deployments/docker-compose.yml up -d    # issuer at http://localhost:8080
 ```
 
-Legant will be available at `http://localhost:8080`.
-
-### Manual Setup
+Or run it manually:
 
 ```bash
-# Set required environment variables
 export LEGANT_DATABASE_URL="postgres://legant:legant@localhost:5432/legant?sslmode=disable"
 export LEGANT_SECRETS_SYSTEM="your-32-byte-or-longer-random-secret"
 export LEGANT_SECRETS_COOKIE="another-32-byte-or-longer-random-secret"
 export LEGANT_ISSUER_URL="http://localhost:8080"
-
-# Build and run
-make build
-./bin/legant serve
+make build && ./bin/legant serve
 ```
+
+Container image: `ghcr.io/legant-dev/legant:latest`. Releases are cut by pushing a
+`v*` tag (see [`.goreleaser.yaml`](.goreleaser.yaml)).
+
+## Documentation
+
+- [Getting started](docs/GETTING_STARTED.md) — bound your first agent end to end, no database.
+- [Core concepts](docs/CONCEPTS.md) — sub/act tokens, attenuation, offline verification, revocation tiers.
+- [Grants reference](docs/GRANTS.md) — every field of `legant.grants.yaml`.
+- [Agent author guide](docs/AGENT_AUTHOR.md) — fetch a token from the issuer via RFC 8693.
+- [Gateway guide](docs/GATEWAY.md) — front an MCP server you do not control.
+- [Coding-agent guard](docs/CLAUDE_CODE.md) — govern Claude Code / Codex / opencode.
+- [Revocation](docs/REVOCATION.md) and [threat model](docs/THREAT_MODEL.md) — the honest design.
 
 ## API Overview
 
@@ -297,7 +337,7 @@ Authority doesn't have to be minted from shell history. Declare it in a
 
 ```bash
 legant init grants                          # writes a commented starter
-legant lint  -f legant.grants.yaml          # semantic checks (escalation, bad window, typos) — CI-gateable
+legant lint  -f legant.grants.yaml          # validate: over-broad scopes, bad windows, typos (CI-gateable)
 legant apply -f legant.grants.yaml          # idempotent: mints the signed tokens, prints a diff
 legant who-can -f legant.grants.yaml --scope warehouse:query --resource finance
 ```
